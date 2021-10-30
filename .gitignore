@@ -26,12 +26,5 @@ bin-release/
 # Other files
 *.drawio
 
-# Tex files
-./paper_files/*.*
-./paper_files/*.*
-./paper_files/*.*
-./paper_files/*.*
-./paper_files/*.*
-./paper_files/*.*
-./paper_files/*.*
-./paper_files/*.*
+# paper files folder
+/paper_files/
