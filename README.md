@@ -1,1 +1,1 @@
-# house_price_index_project
+# House Price Index Project
