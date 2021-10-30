@@ -22,9 +22,13 @@ bin-release/
 *.RData
 *.csv
 *.zip
+*.sav
 
 # Other files
 *.drawio
 
 # ignore folders
 /paper_files/
+/data/
+/output_files/
+/others/
