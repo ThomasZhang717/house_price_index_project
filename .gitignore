@@ -27,11 +27,11 @@ bin-release/
 *.drawio
 
 # Tex generated files
-*.aux
-*.log
-*.out
-*.synctex.ga
-*.toc
-*.nav
-*.snm
-*.bak
+./paper files/paper/*.aux
+./paper files/paper/*.log
+./paper files/paper/*.out
+./paper files/paper/*.synctex.ga
+./paper files/paper/*.toc
+./paper files/paper/*.nav
+./paper files/paper/*.snm
+./paper files/paper/*.bak
