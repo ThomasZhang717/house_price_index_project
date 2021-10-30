@@ -1,0 +1,31 @@
+\begin{table}[ht]
+\centering
+\caption{{\bf The number of observations per year with missing characteristics, 2015 - 2020.} only shows the variables which contain missing attributes.\setlength{\baselineskip}{1.25em}}
+\label{tab_summary_missing_values}
+\setlength{\baselineskip}{1.25em}
+\begin{threeparttable}
+\begin{tabular}{lrrrrrrrrrrr}
+\toprule\toprule
+Year          &2015   &2016   &2017   &2018   &2019   &2020\\
+\midrule
+Total No. obs &32,700 &29,350 &29,709 &27,079 &24,048 &32,087\\
+\midrule
+\multicolumn{4}{l}{No. obs contain missing values}\\
+Floor Area   &12,606  &10,809 &10,891 &9,666  &8,438  &10,497\\
+Year Build   &1,239   &555    &476    &428    &334    &386\\
+Beds         &1,330   &612    &510    &356    &201    &335\\
+Baths        &1,123   &446    &336    &267    &149    &194\\
+Dinning      &11,117  &9,585  &9,939  &8,796  &7,475  &9,943\\
+Kitchen      &1,330   &612    &510    &356    &201    &335\\
+Family       &13,699  &12,035 &12,469 &11,110 &9,911  &13,383\\
+Games        &26,020  &23,222 &23,931 &21,744 &19,293 &25,880\\
+Meals        &23,163  &20,360 &20,476 &18,668 &16,740 &22,468\\
+Lounge       &1,330   &612    &510    &356    &201    &335\\
+Study        &26,646  &23,686 &24,144 &21,964 &19,265 &25,744\\
+Car park     &4,627   &3,500  &3,482  &3,137  &2,670  &3,432\\
+Coordinates  &9,828   &8,482  &8,886  &7,842  &6,573  &9,005\\
+\bottomrule\bottomrule
+\end{tabular}
+Note: The coordinates indicate pairs of longitude and latitude, there is no issue that only latitude or longitude is available. The missing coordinates are fixed by geocoding the addresses via open-source geocoding API and Google API.\setlength{\baselineskip}{1.25em}
+\end{threeparttable}
+\end{table}

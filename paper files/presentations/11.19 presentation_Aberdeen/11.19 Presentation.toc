@@ -1,0 +1,7 @@
+\beamer@sectionintoc {1}{Introduction}{2}{0}{1}
+\beamer@sectionintoc {2}{Data}{6}{0}{2}
+\beamer@sectionintoc {3}{Summary of Methodology}{10}{0}{3}
+\beamer@sectionintoc {4}{Analysis and Results}{13}{0}{4}
+\beamer@subsectionintoc {4}{1}{Full Sample Analysis and Results}{14}{0}{4}
+\beamer@subsectionintoc {4}{2}{Rolling Sample Analysis and Results}{25}{0}{4}
+\beamer@sectionintoc {5}{Conclusions}{31}{0}{5}

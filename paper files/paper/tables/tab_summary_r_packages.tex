@@ -1,0 +1,19 @@
+\begin{table}[ht]
+\centering
+\caption{{\bf Overview of functions and packages used in \textsf{R}.} shows \textsf{R} packages and the functions used to implement the thirteen approaches. \setlength{\baselineskip}{1.25em}}
+\label{tab_summary_r_packages}
+\begin{threeparttable}
+\begin{tabular}{lll}
+\toprule\toprule
+Method              &Package                                       &Function\\
+\hline
+Hedonic linear      &\textsf{stats}                                &\textsf{lm()}\\
+Decision tree       &\textsf{rpart}                                &\textsf{rpart()}\\
+Random forest       &\textsf{ranger} \& \textsf{randomForestSRC}   &\textsf{ranger} \& \textsf{rfsrc}\\
+GBM                 &\textsf{gbm}                                  &\textsf{gbm}\\
+Multiple imputation &\textsf{missRanger}                           &\textsf{missRanger}\\
+Isolation forest    &\textsf{isotree}                              &\textsf{isolation.forest}\\
+\bottomrule\bottomrule
+\end{tabular}
+\end{threeparttable}
+\end{table}

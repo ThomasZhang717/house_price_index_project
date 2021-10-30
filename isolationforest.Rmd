@@ -1,0 +1,2143 @@
+---
+title: "isolationforest"
+author: "Zhuoran"
+date: "5/20/2021"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(foreign)
+library(lubridate)
+library(ggplot2)
+library(isotree)
+library(ggpubr)
+library(gridExtra)
+library(plotly)
+```
+
+
+#read house price
+```{r}
+house_price = read.csv("./full_data_improved_geo.csv")
+full_data = read.csv("./full_data_geo.csv")
+abs = read.csv("./abs_index.csv")
+```
+
+
+#read data
+```{r}
+improved_data = house_price
+improved_data$YEAR_BUI[which(improved_data$YEAR_BUI == 2103)] = 2013
+improved_data$YEAR_BUI[which(improved_data$YEAR_BUI == 2300)] = 2009
+improved_data$BEDS[which(improved_data$BEDS == -5)] = 5
+improved_data$DATE1 = ymd(improved_data$DATE1)
+improved_data$DATE2[which(improved_data$DATE2 == 19700101)] = NA
+improved_data$DATE2 = ymd(improved_data$DATE2)
+```
+
+
+#improved property data
+```{r}
+improved_data$cars = improved_data$CARPRT_A + improved_data$CARPRT_D + improved_data$CARPRT_U + improved_data$GARAGE_A  + improved_data$GARAGE_D  + improved_data$GARAGE_U
+```
+
+
+#number of rooms
+```{r}
+improved_data$numrooms = improved_data$BEDS + improved_data$BATHS + improved_data$DINING + improved_data$KITCHEN + improved_data$FAMILY + improved_data$GAMES + improved_data$MEALS + improved_data$LOUNGE + improved_data$STUDY + improved_data$ENSUITE
+
+length(which(improved_data$numrooms == 0))
+```
+
+
+#correct land area if geo data available
+```{r}
+improved_data$LAND_ARE[which(improved_data$legal_area/improved_data$LAND_ARE > 8 | improved_data$legal_area/improved_data$LAND_ARE < 0.125)] = improved_data$legal_area[which(improved_data$legal_area/improved_data$LAND_ARE > 8 | improved_data$legal_area/improved_data$LAND_ARE < 0.125)]
+```
+
+
+#residential property identify
+```{r}
+improved_data$d_residential = 0
+improved_data$d_residential[which(improved_data$PROP_CLA == "HOUSE       ")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "HOUSES      ")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "APARTMENT HO")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "FLAT        ")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "FLATS       ")] = 1
+improved_data$d_residential[which(str_detect(improved_data$PROP_CLA, "PLEX"))] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "TOWN HOUSE  ")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "TOWN HOUSES ")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "GROUP HOUSE ")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "GROUP HOUSES")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "VILLA HOUSE ")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "VILLA HOUSES")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "HOME UNIT   ")] = 1
+improved_data$d_residential[which(improved_data$PROP_CLA == "HOME UNITS  ")] = 1
+
+improved_data = improved_data %>%
+  filter(improved_data$d_residential == 1)
+
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "HOUSE       ")] = "HOUSE"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "HOUSES      ")] = "HOUSE"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "APARTMENT HO")] = "APARTMENT" 
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "FLAT        ")] = "FLAT"      
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "FLATS       ")] = "FLAT"
+improved_data$PROP_CLA[which(str_detect(improved_data$PROP_CLA, "PLEX"))] = "PLEX"    
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "TOWN HOUSE  ")] = "TOWN HOUSE"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "TOWN HOUSES ")] = "TOWN HOUSE"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "GROUP HOUSE ")] = "GROUP HOUSE"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "GROUP HOUSES")] = "GROUP HOUSE"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "VILLA HOUSE ")] = "VILLA HOUSE"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "VILLA HOUSES")] = "VILLA HOUSE"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "HOME UNIT   ")] = "HOME UNIT"
+improved_data$PROP_CLA[which(improved_data$PROP_CLA == "HOME UNITS  ")] = "HOME UNIT"
+```
+
+
+#quarter numbers
+```{r}
+improved_data$quarter = quarter(improved_data$DATE1)
+improved_data$year = year(improved_data$DATE1)
+improved_data$quarter_num = (improved_data$year - 1988)*4 + improved_data$quarter - 2
+
+improved_data$quarter_pre = quarter(improved_data$DATE2)
+improved_data$year_pre = year(improved_data$DATE2)
+improved_data$quarter_num_pre = (improved_data$year_pre - 1988)*4 + improved_data$quarter_pre - 2
+```
+
+
+#check data (missing values) and using a new anomaly detection method (extended isolation forest)
+```{r}
+for (i in 1988:2020) {
+  temp = improved_data %>%
+    filter(year(improved_data$DATE1) == i)
+
+
+  temp$BEDS[which(temp$BEDS == 0)] = NA
+  temp$BATHS[which(temp$BATHS == 0)] = NA
+  temp$LAND_ARE[which(log(temp$LAND_ARE) < 0)] = NA
+  temp$YEAR_BUI[which(temp$YEAR_BUI == 0)] = NA
+  temp$AREA_HSE[which(log(temp$AREA_HSE) <= 0)] = NA
+  
+  print(i)
+  print(nrow(temp))
+  print(sum(is.na(temp$SALE1)))
+  print(sum(is.na(temp$LAND_ARE)))
+  print(sum(is.na(temp$AREA_HSE)))
+  #print(sum(is.na(temp$YEAR_BUI)))
+  #print(sum(is.na(temp$BEDS)))
+  #print(sum(is.na(temp$BATHS)))
+  #print(sum(is.na(temp$numrooms)))
+  #print(sum(is.na(temp$cars)))
+  #print(sum(is.na(temp$centlong)))
+  #print(sum(is.na(temp$centlat)))
+}
+```
+
+
+#median price for price trend
+```{r}
+median_price = data.frame()
+for (i in 1:129) {
+  median_price[i,1] = i
+  median_price[i,2] = median(improved_data$SALE1[which(improved_data$quarter_num == i)])
+  #median_price[i,3] = median(zzr$SALE1[which(zzr$quarter_num == i)])
+}
+colnames(median_price) = c("quarter", "median_price")
+```
+
+
+#resale and first sale ratio (full data from 1988 Q3)
+```{r}
+full = improved_data
+
+full = full %>%
+  filter(full$quarter_num > 0)
+
+full = full %>%
+  filter(full$MULTI2 == 0)
+
+full = full[-which(full$quarter_num_pre<=0),]
+
+full = full %>%
+  filter(full$YEAR_BUI <= full$year)
+
+full = full %>%
+  filter(full$SALE1 > 0)
+
+full = full[-which(!is.na(full$DATE2) & full$SALE2 == 0),]
+
+
+full$BEDS[which(full$BEDS == 0)] = NA
+full$BATHS[which(full$BATHS == 0)] = NA
+#full$numrooms[which(full$numrooms == 0)] = NA
+#full$cars[which(full$cars == 0)] = NA
+full$LAND_ARE[which(log(full$LAND_ARE) < 0)] = NA
+full$YEAR_BUI[which(full$YEAR_BUI == 0)] = NA
+full$AREA_HSE[which(log(full$AREA_HSE) <= 0)] = NA
+full$AREA_HSE[which(full$AREA_HSE == full$LAND_ARE)] = NA
+
+full$d_strata[which(full$d_strata == 1)] = "strata"
+full$d_strata[which(full$d_strata == 0)] = "nonstrata"
+
+
+full$sale_flat = NA
+full$sale_flat_pre = NA
+for (i in 1:129) {
+  full$sale_flat[which(full$quarter_num == i)] = full$SALE1[which(full$quarter_num == i)]/median_price$median_price[i]*median_price$median_price[94]
+}
+
+for (i in 1:129) {
+  full$sale_flat_pre[which(full$quarter_num_pre == i)] = full$SALE2[which(full$quarter_num_pre == i)]/median_price$median_price[i]*median_price$median_price[94]
+}
+
+full$sale_flat_pre[which(full$YEAR_BUI>full$year_pre)] = NA
+full$SALE2[which(full$YEAR_BUI>full$year_pre)] = NA
+full$SALE2[which(full$SALE2 == 0)] = NA
+full$DATE2[which(full$YEAR_BUI>full$year_pre)] = NA
+
+#price ratio plot
+price_ratio_quarters = data.frame()
+for (i in 1:129) {
+  price_ratio_quarters[i,1] = i
+  price_ratio_quarters[i,2] = length(which(full$quarter_num == i & !is.na(full$DATE2)))/length(which(full$quarter_num == i))
+  price_ratio_quarters[i,3] = length(which(full$quarter_num == i & is.na(full$DATE2)))/length(which(full$quarter_num == i))
+}
+colnames(price_ratio_quarters) = c("quarter", "Resale", "Fisrt-Sale")
+
+price_ratio_quarters = price_ratio_quarters%>%
+  gather(type, ratio, -quarter)
+  
+ggplot(price_ratio_quarters, aes(x=quarter, y=ratio, color = type)) + geom_line() + coord_cartesian(ylim = c(0,1)) + geom_hline(yintercept = c(0.625, 0.375), linetype = "dashed") + labs(title = paste0("The Percentage of Re-Sales and Fisrt-Sales."), x = "Quarters", y = "Percentage") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+#pool data trials (from 2015)
+```{r}
+full = improved_data
+
+full = full %>%
+  filter(full$quarter_num > 106) #2003:60; 2010:86; 2015:106.
+
+full = full %>%
+  filter(full$numrooms > 0)
+
+full = full %>%
+  filter(full$MULTI2 == 0)
+
+full = full[-which(full$quarter_num_pre<=0),]
+
+full = full %>%
+  filter(full$YEAR_BUI <= full$year)
+
+full = full %>%
+  filter(full$SALE1 > 0)
+
+full = full[-which(!is.na(full$DATE2) & full$SALE2 == 0),]
+
+#there are na land area, check by google they are 11116 and 10336 squared meters.
+#only use the lines for starting from 2010.
+#full$LAND_ARE[which(full$LAND_ARE == 0 & full$ST_NO == "31       ")] = 10336
+#full$LAND_ARE[which(full$LAND_ARE == 0 & full$ST_NO == "33       ")] = 11116
+
+
+full$BEDS[which(full$BEDS == 0)] = NA
+full$BATHS[which(full$BATHS == 0)] = NA
+#full$numrooms[which(full$numrooms == 0)] = NA
+#full$cars[which(full$cars == 0)] = NA
+full$LAND_ARE[which(log(full$LAND_ARE) < 0)] = NA
+#full$LAND_ARE[which(full$d_strata == 1)] = NA
+full$YEAR_BUI[which(full$YEAR_BUI == 0)] = NA
+full$AREA_HSE[which(log(full$AREA_HSE) < 0)] = NA
+full$AREA_HSE[which(full$AREA_HSE == full$LAND_ARE)] = NA
+full$SALE2[which(full$quarter_num_pre <= 60)] = NA
+
+#full$d_strata[which(full$d_strata == 1)] = "strata"
+#full$d_strata[which(full$d_strata == 0)] = "nonstrata"
+
+
+full$sale_flat = NA
+full$sale_flat_pre = NA
+#flat by median price
+for (i in 86:129) {
+  full$sale_flat[which(full$quarter_num == i)] = full$SALE1[which(full$quarter_num == i)]/abs$index[i]
+}
+
+for (i in 61:129) {
+  full$sale_flat_pre[which(full$quarter_num_pre == i)] = full$SALE2[which(full$quarter_num_pre == i)]/abs$index[i]
+}
+
+full$sale_flat_pre[which(full$YEAR_BUI>full$year_pre)] = NA
+full$quarter_num_pre[which(full$YEAR_BUI>full$year_pre)] = NA
+full$SALE2[which(full$YEAR_BUI>full$year_pre)] = NA
+full$SALE2[which(full$SALE2 == 0)] = NA
+full$DATE2[which(full$YEAR_BUI>full$year_pre)] = NA
+
+
+full$sale_flat_z = NA
+full$sale_flat_pre_z = NA
+full$land_z = NA
+full$house_size_z = NA
+full$sale_flat_z_pool = NA
+full$sale_flat_pre_z_pool = NA
+full$land_z_pool = NA
+full$house_size_z_pool = NA
+
+
+full$sale_flat_z[which(full$PROP_CLA == "HOUSE")] = scale(log(full$sale_flat[which(full$PROP_CLA == "HOUSE")]))
+full$sale_flat_z[which(full$PROP_CLA == "APARTMENT")] = scale(log(full$sale_flat[which(full$PROP_CLA == "APARTMENT")]))
+full$sale_flat_z[which(full$PROP_CLA == "HOME UNIT")] = scale(log(full$sale_flat[which(full$PROP_CLA == "HOME UNIT")]))
+full$sale_flat_z[which(full$PROP_CLA == "GROUP HOUSE")] = scale(log(full$sale_flat[which(full$PROP_CLA == "GROUP HOUSE")]))
+full$sale_flat_z[which(full$PROP_CLA == "VILLA HOUSE")] = scale(log(full$sale_flat[which(full$PROP_CLA == "VILLA HOUSE")]))
+full$sale_flat_z[which(full$PROP_CLA == "TOWN HOUSE")] = scale(log(full$sale_flat[which(full$PROP_CLA == "TOWN HOUSE")]))
+full$sale_flat_z[which(full$PROP_CLA == "FLAT")] = scale(log(full$sale_flat[which(full$PROP_CLA == "FLAT")]))
+full$sale_flat_z[which(full$PROP_CLA == "PLEX")] = scale(log(full$sale_flat[which(full$PROP_CLA == "PLEX")]))
+
+
+
+full$sale_flat_pre_z[which(full$PROP_CLA == "HOUSE")] = scale(log(full$sale_flat_pre[which(full$PROP_CLA == "HOUSE")]))
+full$sale_flat_pre_z[which(full$PROP_CLA == "APARTMENT")] = scale(log(full$sale_flat_pre[which(full$PROP_CLA == "APARTMENT")]))
+full$sale_flat_pre_z[which(full$PROP_CLA == "HOME UNIT")] = scale(log(full$sale_flat_pre[which(full$PROP_CLA == "HOME UNIT")]))
+full$sale_flat_pre_z[which(full$PROP_CLA == "GROUP HOUSE")] = scale(log(full$sale_flat_pre[which(full$PROP_CLA == "GROUP HOUSE")]))
+full$sale_flat_pre_z[which(full$PROP_CLA == "VILLA HOUSE")] = scale(log(full$sale_flat_pre[which(full$PROP_CLA == "VILLA HOUSE")]))
+full$sale_flat_pre_z[which(full$PROP_CLA == "TOWN HOUSE")] = scale(log(full$sale_flat_pre[which(full$PROP_CLA == "TOWN HOUSE")]))
+full$sale_flat_pre_z[which(full$PROP_CLA == "FLAT")] = scale(log(full$sale_flat_pre[which(full$PROP_CLA == "FLAT")]))
+full$sale_flat_pre_z[which(full$PROP_CLA == "PLEX")] = scale(log(full$sale_flat_pre[which(full$PROP_CLA == "PLEX")]))
+
+
+full$land_z[which(full$PROP_CLA == "HOUSE")] = scale(log(full$LAND_ARE[which(full$PROP_CLA == "HOUSE")]))
+full$land_z[which(full$PROP_CLA == "APARTMENT")] = scale(log(full$LAND_ARE[which(full$PROP_CLA == "APARTMENT")]))
+full$land_z[which(full$PROP_CLA == "HOME UNIT")] = scale(log(full$LAND_ARE[which(full$PROP_CLA == "HOME UNIT")]))
+full$land_z[which(full$PROP_CLA == "GROUP HOUSE")] = scale(log(full$LAND_ARE[which(full$PROP_CLA == "GROUP HOUSE")]))
+full$land_z[which(full$PROP_CLA == "VILLA HOUSE")] = scale(log(full$LAND_ARE[which(full$PROP_CLA == "VILLA HOUSE")]))
+full$land_z[which(full$PROP_CLA == "TOWN HOUSE")] = scale(log(full$LAND_ARE[which(full$PROP_CLA == "TOWN HOUSE")]))
+full$land_z[which(full$PROP_CLA == "FLAT")] = scale(log(full$LAND_ARE[which(full$PROP_CLA == "FLAT")]))
+full$land_z[which(full$PROP_CLA == "PLEX")] = scale(log(full$LAND_ARE[which(full$PROP_CLA == "PLEX")]))
+
+
+full$house_size_z[which(full$PROP_CLA == "HOUSE")] = scale(log(full$AREA_HSE[which(full$PROP_CLA == "HOUSE")]))
+full$house_size_z[which(full$PROP_CLA == "APARTMENT")] = scale(log(full$AREA_HSE[which(full$PROP_CLA == "APARTMENT")]))
+full$house_size_z[which(full$PROP_CLA == "HOME UNIT")] = scale(log(full$AREA_HSE[which(full$PROP_CLA == "HOME UNIT")]))
+full$house_size_z[which(full$PROP_CLA == "GROUP HOUSE")] = scale(log(full$AREA_HSE[which(full$PROP_CLA == "GROUP HOUSE")]))
+full$house_size_z[which(full$PROP_CLA == "VILLA HOUSE")] = scale(log(full$AREA_HSE[which(full$PROP_CLA == "VILLA HOUSE")]))
+full$house_size_z[which(full$PROP_CLA == "TOWN HOUSE")] = scale(log(full$AREA_HSE[which(full$PROP_CLA == "TOWN HOUSE")]))
+full$house_size_z[which(full$PROP_CLA == "FLAT")] = scale(log(full$AREA_HSE[which(full$PROP_CLA == "FLAT")]))
+full$house_size_z[which(full$PROP_CLA == "PLEX")] = scale(log(full$AREA_HSE[which(full$PROP_CLA == "PLEX")]))
+
+full$price_ratio = log(full$sale_flat_pre/full$sale_flat)
+
+full$price_ratio_z = scale(full$price_ratio)
+
+full$land_ratio = log(full$sale_flat/full$LAND_ARE)
+
+full$land_ratio_z = scale(full$land_ratio)
+
+full$land_ratio_pre = log(full$sale_flat_pre/full$LAND_ARE)
+
+full$land_ratio_pre_z = scale(full$land_ratio_pre)
+
+full$house_ratio = log(full$sale_flat/full$AREA_HSE)
+
+full$house_ratio_z = scale(full$house_ratio)
+
+full$house_ratio_pre = log(full$sale_flat_pre/full$AREA_HSE)
+
+full$house_ratio_pre_z = scale(full$house_ratio_pre)
+
+full$house_land_ratio = log(full$AREA_HSE/full$LAND_ARE)
+
+full$house_land_ratio_z = scale(full$house_land_ratio)
+
+full$sale_flat_z_pool = scale(log(full$sale_flat))
+
+full$sale_flat_pre_z_pool = scale(log(full$sale_flat_pre))
+
+full$land_z_pool = scale(log(full$LAND_ARE))
+
+full$house_size_z_pool = scale(log(full$AREA_HSE))
+```
+
+
+#zscore clean nonmarket
+```{r}
+#density plots
+#temp_plot = data.frame(log_sale_flat = log(full$sale_flat), log_sale_flat_pre = log(full$sale_flat), log_land = log(full$LAND_ARE), log_house_size = log(full$AREA_HSE), PROP_CLA = full$PROP_CLA)
+
+
+#sale = ggplot(temp_plot, aes(x=log_sale_flat, color = PROP_CLA, fill = PROP_CLA)) + geom_density(alpha = 0.5) + theme(legend.position = "none") + labs(x="log Price")
+
+#ggplotly(sale)
+
+#sale_pre = ggplot(temp_plot, aes(x=log_sale_flat_pre, color = PROP_CLA, fill = PROP_CLA)) + geom_density(alpha = 0.5)
+
+#ggplotly(sale_pre)
+
+#land = ggplot(temp_plot, aes(x=log_land, color = PROP_CLA, fill = PROP_CLA)) + geom_density(alpha = 0.5) + theme(legend.position = "none") + labs(x="log Land Size")
+
+#ggplotly(land)
+
+#house = ggplot(temp_plot, aes(x=log_house_size, color = PROP_CLA, fill = PROP_CLA)) + geom_density(alpha = 0.5) + theme(legend.position = "none") + labs(x="log Floor area")
+
+#ggplotly(house)
+
+#legend = get_legend(sale_pre) # need to delete legend position, save legend, then hide legend.
+
+#grid.arrange(sale, land, house, legend, ncol = 2, nrow = 2, widths = c(2.5, 2.5), heights = c(2.5, 2.5))
+
+
+zzr_zscore = full[-which(full$sale_flat_z >=2.57 | full$sale_flat_z <=-2.57),]
+
+zzr_zscore = zzr_zscore[-which(zzr_zscore$sale_flat_pre_z >=2.57 | zzr_zscore$sale_flat_pre_z <=-2.57),]
+
+
+
+
+#zzr_zscore = zzr_zscore[-which(zzr_zscore$land_z >=2.57 | zzr_zscore$land_z <=-2.57),]
+
+#zzr_zscore = zzr_zscore[-which(zzr_zscore$house_size_z >=2.57 | zzr_zscore$house_size_z <=-2.57),]
+```
+
+
+```{r}
+temp = zzr_zscore
+
+temp$age = temp$year - temp$YEAR_BUI
+
+temp_forest_test = data.frame(temp$sale_flat, temp$LAND_ARE, temp$AREA_HSE, temp$age, temp$BEDS, temp$BATHS, temp$DINING, temp$KITCHEN, temp$FAMILY, temp$GAMES, temp$MEALS, temp$LOUNGE, temp$STUDY, temp$cars, temp$PROP_CLA)
+
+#temp_forest_test = data.frame(temp$sale_flat, temp$LAND_ARE, temp$AREA_HSE, temp$BEDS, temp$BATHS, temp$DINING, temp$KITCHEN, temp$FAMILY, temp$GAMES, temp$MEALS, temp$LOUNGE, temp$STUDY, temp$cars, temp$centlat, temp$centlong, temp$PROP_CLA)
+
+isoforest_test = isolation.forest(temp_forest_test, ntrees = 2000, ndim = 5, random_seed = 717, categ_split_type = "single_categ")
+
+#isoforest_test = isolation.forest(temp_forest_test, ntrees = 1000, ndim = 4, random_seed = 717, categ_split_type = "single_categ", penalize_range = TRUE, prob_pick_avg_gain = 0.75)
+
+temp_forest_test$anomaly_score = predict(isoforest_test, temp_forest_test)
+
+zzr_zscore$anomaly_score = temp_forest_test$anomaly_score
+
+temp = temp_forest_test[which(temp_forest_test$anomaly_score<=0.5),]
+```
+
+
+
+
+#full_dataset this is just for record the data clean process and check the numbers of obs, no big use
+```{r}
+full_data = read.csv("./full_data_geo.csv")
+full_data$YEAR_BUI[which(full_data$YEAR_BUI == 2103)] = 2013
+full_data$YEAR_BUI[which(full_data$YEAR_BUI == 2300)] = 2009
+full_data$BEDS[which(full_data$BEDS == -5)] = 5
+full_data$DATE1 = ymd(full_data$DATE1)
+full_data$quarter = quarter(full_data$DATE1)
+full_data$year = year(full_data$DATE1)
+full_data$quarter_num = (full_data$year - 1988)*4 + full_data$quarter - 2
+
+full_data$DATE2[which(full_data$DATE2 == 19700101)] = NA
+full_data$DATE2 = ymd(full_data$DATE2)
+full_data$quarter_pre = quarter(full_data$DATE2)
+full_data$year_pre = year(full_data$DATE2)
+full_data$quarter_num_pre = (full_data$year_pre - 1988)*4 + full_data$quarter_pre - 2
+
+#before 1988-06-30
+length(which(full_data$quarter_num_pre<=0 | full_data$quarter_num<=0))
+#yearbui>yearsale
+length(which(full_data$YEAR_BUI > full_data$year))
+#sale=0
+length(which(full_data$SALE1 == 0 | full_data$SALE2 == 0 & !is.na(full_data$DATE2)))
+#multi2
+length(which(full_data$MULTI2 == 1))
+
+full_data = full_data %>%
+  filter(full_data$quarter_num > 0)
+
+full_data = full_data[-which(full_data$quarter_num_pre<=0),]
+
+
+full_data = full_data %>%
+  filter(full_data$YEAR_BUI <= full_data$year)
+
+full_data = full_data %>%
+  filter(full_data$SALE1 > 0)
+
+full_data = full_data[-which(full_data$SALE2 == 0 & !is.na(full_data$DATE2)),]
+
+full_data = full_data %>%
+  filter(full_data$MULTI2 == 0)
+
+full_data$d_residential = 0
+full_data$d_residential[which(full_data$PROP_CLA == "HOUSE       ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOUSES      ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "APARTMENT HO")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "FLAT        ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "FLATS       ")] = 1
+full_data$d_residential[which(str_detect(full_data$PROP_CLA, "PLEX"))] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "TOWN HOUSE  ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "TOWN HOUSES ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "GROUP HOUSE ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "GROUP HOUSES")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "VILLA HOUSE ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "VILLA HOUSES")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOME UNIT   ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOME UNITS  ")] = 1
+
+full_data = full_data %>%
+  filter(full_data$d_residential == 1)
+
+full_data = full_data %>%
+  filter(full_data$quarter_num > 106)
+```
+
+
+#check overlap part of all datasets
+```{r}
+isoforest = full[which(full$anomaly_score>0.4),]
+
+temp = setdiff(full[,1], zzr_zscore[,1])
+zscore = data.frame()
+for (i in temp) {
+  zscore = rbind(zscore, full[which(full$X == i),])
+  print(i)
+}
+ 
+temp = setdiff(full[,1], zzr_md[,1])
+md = data.frame()
+for (i in temp) {
+  md = rbind(md, full[which(full$X == i),])
+  print(i)
+}
+
+temp = setdiff(full[,1], zzr_zscore_ratio[,1])
+zscore_ratio = data.frame()
+for (i in temp) {
+  zscore_ratio = rbind(zscore_ratio, full[which(full$X == i),])
+  print(i)
+}
+
+ovelap_im = semi_join(isoforest[,1:80], md[,1:80])
+ovelap_mz = semi_join(zscore[,1:80], md[,1:80])
+ovelap_iz = semi_join(isoforest[,1:80], zscore[,1:80])
+
+ovelap = semi_join(ovelap_im, ovelap_mz)
+
+
+ovelap_mzr = semi_join(zscore_ratio[,1:80], md[,1:80])
+ovelap_izr = semi_join(isoforest[,1:80], zscore_ratio[,1:80])
+
+```
+
+
+#boxplot for discrete variables
+```{r}
+#bedrooms
+temp = data.frame(class = full$PROP_CLA, bed = full$BEDS)
+
+ggplot(temp, aes(x=class, y=bed)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$bed[which(temp$class == "APARTMENT")])
+table(temp$bed[which(temp$class == "FLAT")])
+table(temp$bed[which(temp$class == "GROUP HOUSE")])
+table(temp$bed[which(temp$class == "HOME UNIT")])
+table(temp$bed[which(temp$class == "HOUSE")])
+table(temp$bed[which(temp$class == "PLEX")])
+table(temp$bed[which(temp$class == "TOWN HOUSE")])
+table(temp$bed[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#bathrooms
+temp = data.frame(class = full$PROP_CLA, bath = full$BATHS)
+
+ggplot(temp, aes(x=class, y=bath)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$bath[which(temp$class == "APARTMENT")])
+table(temp$bath[which(temp$class == "FLAT")])
+table(temp$bath[which(temp$class == "GROUP HOUSE")])
+table(temp$bath[which(temp$class == "HOME UNIT")])
+table(temp$bath[which(temp$class == "HOUSE")])
+table(temp$bath[which(temp$class == "PLEX")])
+table(temp$bath[which(temp$class == "TOWN HOUSE")])
+table(temp$bath[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#dining room
+temp = data.frame(class = full$PROP_CLA, dining = full$DINING)
+
+ggplot(temp, aes(x=class, y=dining)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$dining[which(temp$class == "APARTMENT")])
+table(temp$dining[which(temp$class == "FLAT")])
+table(temp$dining[which(temp$class == "GROUP HOUSE")])
+table(temp$dining[which(temp$class == "HOME UNIT")])
+table(temp$dining[which(temp$class == "HOUSE")])
+table(temp$dining[which(temp$class == "PLEX")])
+table(temp$dining[which(temp$class == "TOWN HOUSE")])
+table(temp$dining[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#car parks
+temp = data.frame(class = full$PROP_CLA, car = full$cars)
+
+ggplot(temp, aes(x=class, y=car)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$car[which(temp$class == "APARTMENT")])
+table(temp$car[which(temp$class == "FLAT")])
+table(temp$car[which(temp$class == "GROUP HOUSE")])
+table(temp$car[which(temp$class == "HOME UNIT")])
+table(temp$car[which(temp$class == "HOUSE")])
+table(temp$car[which(temp$class == "PLEX")])
+table(temp$car[which(temp$class == "TOWN HOUSE")])
+table(temp$car[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#kichen
+temp = data.frame(class = full$PROP_CLA, kichen = full$KITCHEN)
+
+ggplot(temp, aes(x=class, y=kichen)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$kichen[which(temp$class == "APARTMENT")])
+table(temp$kichen[which(temp$class == "FLAT")])
+table(temp$kichen[which(temp$class == "GROUP HOUSE")])
+table(temp$kichen[which(temp$class == "HOME UNIT")])
+table(temp$kichen[which(temp$class == "HOUSE")])
+table(temp$kichen[which(temp$class == "PLEX")])
+table(temp$kichen[which(temp$class == "TOWN HOUSE")])
+table(temp$kichen[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#family room
+temp = data.frame(class = full$PROP_CLA, family = full$FAMILY)
+
+ggplot(temp, aes(x=class, y=family)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$family[which(temp$class == "APARTMENT")])
+table(temp$family[which(temp$class == "FLAT")])
+table(temp$family[which(temp$class == "GROUP HOUSE")])
+table(temp$family[which(temp$class == "HOME UNIT")])
+table(temp$family[which(temp$class == "HOUSE")])
+table(temp$family[which(temp$class == "PLEX")])
+table(temp$family[which(temp$class == "TOWN HOUSE")])
+table(temp$family[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#game room
+temp = data.frame(class = full$PROP_CLA, game = full$GAMES)
+
+ggplot(temp, aes(x=class, y=game)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$game[which(temp$class == "APARTMENT")])
+table(temp$game[which(temp$class == "FLAT")])
+table(temp$game[which(temp$class == "GROUP HOUSE")])
+table(temp$game[which(temp$class == "HOME UNIT")])
+table(temp$game[which(temp$class == "HOUSE")])
+table(temp$game[which(temp$class == "PLEX")])
+table(temp$game[which(temp$class == "TOWN HOUSE")])
+table(temp$game[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#meal room
+temp = data.frame(class = full$PROP_CLA, meal = full$MEALS)
+
+ggplot(temp, aes(x=class, y=meal)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$meal[which(temp$class == "APARTMENT")])
+table(temp$meal[which(temp$class == "FLAT")])
+table(temp$meal[which(temp$class == "GROUP HOUSE")])
+table(temp$meal[which(temp$class == "HOME UNIT")])
+table(temp$meal[which(temp$class == "HOUSE")])
+table(temp$meal[which(temp$class == "PLEX")])
+table(temp$meal[which(temp$class == "TOWN HOUSE")])
+table(temp$meal[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#lounge room
+temp = data.frame(class = full$PROP_CLA, lounge = full$LOUNGE)
+
+ggplot(temp, aes(x=class, y=lounge)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$lounge[which(temp$class == "APARTMENT")])
+table(temp$lounge[which(temp$class == "FLAT")])
+table(temp$lounge[which(temp$class == "GROUP HOUSE")])
+table(temp$lounge[which(temp$class == "HOME UNIT")])
+table(temp$lounge[which(temp$class == "HOUSE")])
+table(temp$lounge[which(temp$class == "PLEX")])
+table(temp$lounge[which(temp$class == "TOWN HOUSE")])
+table(temp$lounge[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+
+#study room
+temp = data.frame(class = full$PROP_CLA, study = full$STUDY)
+
+ggplot(temp, aes(x=class, y=study)) + geom_boxplot(outlier.alpha = 0.1)
+
+table(temp$study[which(temp$class == "APARTMENT")])
+table(temp$study[which(temp$class == "FLAT")])
+table(temp$study[which(temp$class == "GROUP HOUSE")])
+table(temp$study[which(temp$class == "HOME UNIT")])
+table(temp$study[which(temp$class == "HOUSE")])
+table(temp$study[which(temp$class == "PLEX")])
+table(temp$study[which(temp$class == "TOWN HOUSE")])
+table(temp$study[which(temp$class == "VILLA HOUSE")])
+
+table(temp)
+```
+
+
+
+
+
+#not run
+#zscore
+```{r}
+zzr_zscore = full[-which(full$sale_flat_z>=2.24 | full$sale_flat_z<=-2.24),]
+
+zzr_zscore = zzr_zscore[-which(zzr_zscore$sale_flat_pre_z >=2.24 | zzr_zscore$sale_flat_pre_z <=-2.24),]
+
+zzr_zscore = zzr_zscore[-which(zzr_zscore$land_z >=2.24 | zzr_zscore$land_z <=-2.24),]
+
+zzr_zscore = zzr_zscore[-which(zzr_zscore$house_size_z >=2.24 | zzr_zscore$house_size_z <=-2.24),]
+
+zzr_zscore_ratio = zzr_zscore[-which(zzr_zscore$price_ratio_z >=2.24 | zzr_zscore$price_ratio_z <=-2.24),]
+
+zzr_zscore_ratio = zzr_zscore_ratio[-which(zzr_zscore_ratio$land_ratio_z >=2.24 | zzr_zscore_ratio$land_ratio_z <=-2.24),]
+
+zzr_zscore_ratio = zzr_zscore_ratio[-which(zzr_zscore_ratio$house_ratio_z >=2.24 | zzr_zscore_ratio$house_ratio_z <=-2.24),]
+
+zzr_zscore_ratio = zzr_zscore_ratio[-which(zzr_zscore_ratio$house_land_ratio_z >=2.24 | zzr_zscore_ratio$house_land_ratio_z <=-2.24),]
+
+zzr_zscore_ratio = zzr_zscore_ratio[-which(zzr_zscore_ratio$land_ratio_pre_z >=2.24 | zzr_zscore_ratio$land_ratio_z <=-2.24),]
+
+zzr_zscore_ratio = zzr_zscore_ratio[-which(zzr_zscore_ratio$house_ratio_pre_z >=2.24 | zzr_zscore_ratio$house_ratio_z <=-2.24),]
+```
+
+
+#mahalanobis distance
+```{r}
+temp_meam = data.frame(sale_price = full$sale_flat_z, sale_price_pre = full$sale_flat_pre_z, land = full$land_z, house_size = full$house_size_z)
+#no-missing
+temp = full[which(!is.na(full$sale_flat) & !is.na(full$sale_flat_pre) & !is.na(full$LAND_ARE) & !is.na(full$AREA_HSE)),]
+#temp_m = data.frame(sale_price = log(temp$sale_flat), sale_price_pre = log(temp$sale_flat_pre), land = log(temp$LAND_ARE), house_size = log(temp$AREA_HSE))
+temp_m = data.frame(sale_price = temp$sale_flat_z, sale_price_pre = temp$sale_flat_pre_z, land = temp$land_z, house_size = temp$house_size_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_4 = NA
+full$md_4[which(!is.na(full$sale_flat) & !is.na(full$sale_flat_pre) & !is.na(full$LAND_ARE) & !is.na(full$AREA_HSE))] = temp$MD
+
+#no sale
+temp = full[which(!is.na(full$sale_flat_pre) & !is.na(full$LAND_ARE) & !is.na(full$AREA_HSE)),]
+#temp_m = data.frame(sale_price_pre = log(temp$sale_flat_pre), land = log(temp$LAND_ARE), house_size = log(temp$AREA_HSE))
+temp_m = data.frame(sale_price_pre = temp$sale_flat_pre_z, land = temp$land_z, house_size = temp$house_size_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(2,3,4)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_3_nosale = NA
+full$md_3_nosale[which(!is.na(full$sale_flat_pre) & !is.na(full$LAND_ARE) & !is.na(full$AREA_HSE))] = temp$MD
+
+#no sale_pre
+temp = full[which(!is.na(full$sale_flat) & !is.na(full$LAND_ARE) & !is.na(full$AREA_HSE)),]
+#temp_m = data.frame(sale_price = log(temp$sale_flat), land = log(temp$LAND_ARE), house_size = log(temp$AREA_HSE))
+temp_m = data.frame(sale_price = temp$sale_flat_z, land = temp$land_z, house_size = temp$house_size_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(1,3,4)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_3_nosalepre = NA
+full$md_3_nosalepre[which(!is.na(full$sale_flat) & !is.na(full$LAND_ARE) & !is.na(full$AREA_HSE))] = temp$MD
+
+#no land
+temp = full[which(!is.na(full$sale_flat) & !is.na(full$sale_flat_pre) & !is.na(full$AREA_HSE)),]
+#temp_m = data.frame(sale_price = log(temp$sale_flat), sale_price_pre = log(temp$sale_flat_pre), house_size = log(temp$AREA_HSE))
+temp_m = data.frame(sale_price = temp$sale_flat_z, sale_price_pre = temp$sale_flat_pre_z, house_size = temp$house_size_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(1,2,4)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_3_noland = NA
+full$md_3_noland[which(!is.na(full$sale_flat) & !is.na(full$sale_flat_pre) & !is.na(full$AREA_HSE))] = temp$MD
+
+#no house size
+temp = full[which(!is.na(full$sale_flat) & !is.na(full$sale_flat_pre) & !is.na(full$LAND_ARE)),]
+#temp_m = data.frame(sale_price = log(temp$sale_flat), sale_price_pre = log(temp$sale_flat_pre), land = log(temp$LAND_ARE))
+temp_m = data.frame(sale_price = temp$sale_flat_z, sale_price_pre = temp$sale_flat_pre_z, land = temp$land_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(1,2,3)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_3_nohousesize = NA
+full$md_3_nohousesize[which(!is.na(full$sale_flat) & !is.na(full$sale_flat_pre) & !is.na(full$LAND_ARE))] = temp$MD
+
+#no sale_pre and land
+temp = full[which(!is.na(full$sale_flat) & !is.na(full$AREA_HSE)),]
+#temp_m = data.frame(sale_price = log(temp$sale_flat), house_size = log(temp$AREA_HSE))
+temp_m = data.frame(sale_price = temp$sale_flat_z, house_size = temp$house_size_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(1,4)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_2_nosalepreland = NA
+full$md_2_nosalepreland[which(!is.na(full$sale_flat) & !is.na(full$AREA_HSE))] = temp$MD
+
+#no sale_pre and house size
+temp = full[which(!is.na(full$sale_flat) & !is.na(full$LAND_ARE)),]
+#temp_m = data.frame(sale_price = log(temp$sale_flat), land = log(temp$LAND_ARE))
+temp_m = data.frame(sale_price = temp$sale_flat_z, land = temp$land_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(1,3)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_2_nosaleprehouse = NA
+full$md_2_nosaleprehouse[which(!is.na(full$sale_flat) & !is.na(full$LAND_ARE))] = temp$MD
+
+#no house size and land
+temp = full[which(!is.na(full$sale_flat) & !is.na(full$sale_flat_pre)),]
+#temp_m = data.frame(sale_price = log(temp$sale_flat), sale_price_pre = log(temp$sale_flat_pre))
+temp_m = data.frame(sale_price = temp$sale_flat_z, sale_price_pre = temp$sale_flat_pre_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(1,2)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_2_nolandhousesize = NA
+full$md_2_nolandhousesize[which(!is.na(full$sale_flat) & !is.na(full$sale_flat_pre))] = temp$MD
+
+#no sale and land
+temp = full[which(!is.na(full$sale_flat_pre) & !is.na(full$AREA_HSE)),]
+#temp_m = data.frame(sale_price_pre = log(temp$sale_flat_pre), house_size = log(temp$AREA_HSE))
+temp_m = data.frame(sale_price_pre = temp$sale_flat_pre_z, house_size = temp$house_size_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(2,4)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_2_nosaleland = NA
+full$md_2_nosaleland[which(!is.na(full$sale_flat_pre) & !is.na(full$AREA_HSE))] = temp$MD
+
+#no sale and house size
+temp = full[which(!is.na(full$sale_flat_pre) & !is.na(full$LAND_ARE)),]
+#temp_m = data.frame(sale_price_pre = log(temp$sale_flat_pre), land = log(temp$LAND_ARE))
+temp_m = data.frame(sale_price_pre = temp$sale_flat_pre_z, land = temp$land_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(2,3)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_2_nosalehouse = NA
+full$md_2_nosalehouse[which(!is.na(full$sale_flat_pre) & !is.na(full$LAND_ARE))] = temp$MD
+
+#no sale and sale_pre
+temp = full[which(!is.na(full$AREA_HSE) & !is.na(full$LAND_ARE)),]
+#temp_m = data.frame(house_size = log(temp$AREA_HSE), land = log(temp$LAND_ARE))
+temp_m = data.frame(and = temp$land_z, house_size = temp$house_size_z)
+temp_centroid = colMeans(temp_meam, na.rm = TRUE)[c(3,4)]
+temp$MD = mahalanobis(temp_m, center = temp_centroid, cov = cov(temp_m))
+
+full$md_2_nosaleandpre = NA
+full$md_2_nosaleandpre[which(!is.na(full$AREA_HSE) & !is.na(full$LAND_ARE))] = temp$MD
+
+
+
+zzr_md = full[-which(full$md_4 >= 9.488),]
+zzr_md = zzr_md[-which(zzr_md$md_3_nosalepre >= 7.815),]
+zzr_md = zzr_md[-which(zzr_md$md_3_noland >= 7.815),]
+zzr_md = zzr_md[-which(zzr_md$md_3_nohousesize >= 7.815),]
+zzr_md = zzr_md[-which(zzr_md$md_3_nosale >= 7.815),]
+zzr_md = zzr_md[-which(zzr_md$md_2_nosalepreland >= 5.991),]
+zzr_md = zzr_md[-which(zzr_md$md_2_nosaleprehouse >= 5.991),]
+zzr_md = zzr_md[-which(zzr_md$md_2_nolandhousesize >= 5.991),]
+zzr_md = zzr_md[-which(zzr_md$md_2_nosaleland >= 5.991),]
+zzr_md = zzr_md[-which(zzr_md$md_2_nosalehouse >= 5.991),]
+zzr_md = zzr_md[-which(zzr_md$md_2_nosaleandpre >= 5.991),]
+```
+
+
+
+
+#final dataset for modeling
+```{r}
+#after isolation forest separately
+#expert_nonstrata = nonstrata_full[which(nonstrata_full$anomaly_score <= 0.5),]
+#expert_strata = strata_full[which(strata_full$anomaly_score <= 0.5),]
+
+#finaldatasetformodel = rbind(expert_nonstrata, expert_strata)
+
+#after isolation forest together
+finaldatasetformodel = full[which(full$anomaly_score<=0.5),]
+write.csv(finaldatasetformodel, "./finaldatasetformodel.csv")
+
+
+#before isolation forest separately
+#finaldatasetformodel_noiso = rbind(nonstrata, strata)
+
+#before isolation forest together
+finaldatasetformodel_noiso = full
+
+write.csv(finaldatasetformodel_noiso, "./finaldatasetformodel_noiso.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################### 
+##############################USELESS############################## ################################################################### 
+#pool data trials + add quarter numbers into isolation forest prepare data #nonstrata which(improved_data$d_strata == 0 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0 & improved_data$SALE1 > 0) 788943
+```{r}
+nonstrata_full = improved_data[which(improved_data$d_strata == 0),]
+
+nonstrata_full = nonstrata_full %>%
+  filter(nonstrata_full$quarter_num > 0)
+
+nonstrata_full = nonstrata_full %>%
+  filter(nonstrata_full$YEAR_BUI <= nonstrata_full$year)
+
+nonstrata_full = nonstrata_full %>%
+  filter(nonstrata_full$SALE1 > 0)
+
+nonstrata_full$BEDS[which(nonstrata_full$BEDS == 0)] = NA
+nonstrata_full$BATHS[which(nonstrata_full$BATHS == 0)] = NA
+nonstrata_full$numrooms[which(nonstrata_full$numrooms == 0)] = NA
+nonstrata_full$cars[which(nonstrata_full$cars == 0)] = NA
+nonstrata_full$LAND_ARE[which(log(nonstrata_full$LAND_ARE) < 0)] = NA
+nonstrata_full$YEAR_BUI[which(nonstrata_full$YEAR_BUI == 0)] = NA
+nonstrata_full$AREA_HSE[which(log(nonstrata_full$AREA_HSE) <= 0)] = NA
+nonstrata_full$AREA_HSE[which(nonstrata_full$AREA_HSE == nonstrata_full$LAND_ARE)] = NA
+
+
+temp_forest_test = data.frame(log(nonstrata_full$LAND_ARE), log(nonstrata_full$AREA_HSE), log(nonstrata_full$SALE1), nonstrata_full$YEAR_BUI, nonstrata_full$BEDS, nonstrata_full$BATHS, nonstrata_full$numrooms, nonstrata_full$cars, nonstrata_full$centlat, nonstrata_full$centlong, nonstrata_full$LA_DESC, nonstrata_full$PROP_CLA, nonstrata_full$quarter_num)
+
+```
+
+
+#run model
+```{r}
+set.seed(717)
+#different sample size see the convergence
+isoforest_test_nonstrata = isolation.forest(temp_forest_test, sample_size = 32768, ntrees = 500, ndim = 3, ntry = 10, max_depth = 60)
+
+
+temp_forest_test$anomaly_score = predict(isoforest_test_nonstrata, temp_forest_test)
+#temp_forest_test$average_depth = predict(isoforest_test_nonstrata, temp_forest_test, type = "avg_depth")
+temp_forest_test$na_count = apply(temp_forest_test, 1, function(x) sum(is.na(x)))
+
+nonstrata_full$anomaly_score = temp_forest_test$anomaly_score
+```
+
+
+#pool data trials + add quarter numbers into isolation forest prepare data #strata which(improved_data$d_strata == 1 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0 & improved_data$SALE1 > 0) 392174
+```{r}
+strata_full = improved_data[which(improved_data$d_strata == 1),]
+
+strata_full = strata_full %>%
+  filter(strata_full$quarter_num > 0)
+
+strata_full = strata_full %>%
+  filter(strata_full$YEAR_BUI <= strata_full$year)
+
+strata_full = strata_full %>%
+  filter(strata_full$SALE1 > 0)
+
+strata_full$BEDS[which(strata_full$BEDS == 0)] = NA
+strata_full$BATHS[which(strata_full$BATHS == 0)] = NA
+strata_full$numrooms[which(strata_full$numrooms == 0)] = NA
+strata_full$cars[which(strata_full$cars == 0)] = NA
+strata_full$LAND_ARE = NA
+strata_full$YEAR_BUI[which(strata_full$YEAR_BUI == 0)] = NA
+strata_full$AREA_HSE[which(log(strata_full$AREA_HSE) <= 0)] = NA
+
+
+temp_forest_test = data.frame(log(strata_full$AREA_HSE), log(strata_full$SALE1), strata_full$YEAR_BUI, strata_full$BEDS, strata_full$BATHS, strata_full$numrooms, strata_full$cars, strata_full$centlat, strata_full$centlong, strata_full$LA_DESC, strata_full$PROP_CLA, strata_full$quarter_num)
+
+```
+
+
+#run model
+```{r}
+set.seed(717)
+#different sample size see the convergence
+isoforest_test_strata = isolation.forest(temp_forest_test, sample_size = 32768, ntrees = 500, ndim = 3, ntry = 10, max_depth = 60)
+
+
+temp_forest_test$anomaly_score = predict(isoforest_test_strata, temp_forest_test)
+#temp_forest_test$average_depth = predict(isoforest_test_strata, temp_forest_test, type = "avg_depth")
+temp_forest_test$na_count = apply(temp_forest_test, 1, function(x) sum(is.na(x)))
+
+strata_full$anomaly_score = temp_forest_test$anomaly_score
+```
+
+
+#nonstrata #plot continuous variables' density with same x scale
+```{r}
+temp = improved_data[which(improved_data$d_strata == 0 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),]
+#sale price
+#before cleaning
+#in one
+#trial one
+zzr = data.frame()
+zzr[1:788943,1] = temp$SALE1
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = nonstrata_full$SALE1[which(nonstrata_full$anomaly_score<=0.5)]
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("price", "type")
+
+ggplot(zzr, aes(log(price), fill = type)) + geom_density(alpha = 0.5) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(2,18)) + labs(title = paste0("Sale Price Density Plot (Non-Strata)."), x = "Sale Price (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#trial two
+zzr = data.frame()
+zzr[1:788943,1] = c(rep(1, 7937),  rep(2, 72783), rep(3, 77261), rep(4, 81598), rep(5, 75998), rep(6, 79181), rep(7, 79374), rep(8, 79608), rep(9, 79315), rep(10, 77546), rep(11, 70511), rep(12, 7831))
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = c(rep(1, 6560),  rep(2, 72675), rep(3, 77194), rep(4, 81501), rep(5, 75870), rep(6, 78984), rep(7, 79168), rep(8, 79436), rep(9, 79124), rep(10, 77208), rep(11, 69496), rep(12, 6935))
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("price", "type")
+
+ggplot(zzr, aes(price, fill = type)) + geom_bar(position = "dodge")  + scale_x_continuous(breaks = seq(1,12,1), labels = c("<26.5k", "26.5k-82k", "82k-110k", "26.5k-145k", "26.5k-191k", "26.5k-269k", "26.5k-350k", "26.5k-430k", "26.5k-530k", "26.5k-725k", "26.5k-1825k", ">1825k")) + scale_y_continuous(breaks = seq(0,80000,20000)) + coord_cartesian(xlim = c(1,12)) + labs(title = paste0("Sale Price Bar Chart (Non-Strata)."), x = "Sale Price Range", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+          
+#separately
+ggplot(improved_data[which(improved_data$d_strata == 0 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),], aes(log(SALE1))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(2,18)) + labs(title = paste0("Sale Price Density Plot (Strata) before cleaning."), x = "Sale Price (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(nonstrata_full, aes(log(SALE1))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(2,18)) + labs(title = paste0("Sale Price Density Plot (Non-Strata) before cleaning."), x = "Sale Price (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+#after cleaning
+ggplot(nonstrata_full[which(nonstrata_full$anomaly_score <= 0.5),], aes(log(SALE1))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(2,18)) + labs(title = paste0("Sale Price Density Plot (Non-Strata) after cleaning."), x = "Sale Price (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#land size
+#before cleaning
+#in one
+#trial one
+zzr = data.frame()
+zzr[1:788943,1] = temp$LAND_ARE
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = nonstrata_full$LAND_ARE[which(nonstrata_full$anomaly_score<=0.5)]
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("land", "type")
+
+ggplot(zzr, aes(log(land), fill = type)) + geom_density(alpha = 0.5) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("Land Size Density Plot (Non-Strata)."), x = "Land Size (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#trial two
+zzr = data.frame()
+zzr[1:788943,1] = c(rep(1, 7938),  rep(2, 71224), rep(3, 79437), rep(4, 84414), rep(5, 75590), rep(6, 77063), rep(7, 78004), rep(8, 79467), rep(9, 78120), rep(10, 78795), rep(11, 71004), rep(12, 7887))
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = c(rep(1, 7779),  rep(2, 71027), rep(3, 79215), rep(4, 84135), rep(5, 75469), rep(6, 76916), rep(7, 77841), rep(8, 79266), rep(9, 77819), rep(10, 78279), rep(11, 69520), rep(12, 6885))
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("price", "type")
+
+
+ggplot(zzr, aes(price, fill = type)) + geom_bar(position = "dodge")  + scale_x_continuous(breaks = seq(1,12,1), labels = c("<296", "296-501", "501-601", "601-680", "680-696", "696-714", "714-740", "740-794", "794-860", "860-1026", "1026-20126", ">20126")) + scale_y_continuous(breaks = seq(0,80000,20000)) + coord_cartesian(xlim = c(1,12)) + labs(title = paste0("Land Size Bar Chart (Non-Strata)."), x = "Land Size Range", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+#separately
+ggplot(improved_data[which(improved_data$d_strata == 0 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),], aes(log(LAND_ARE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("Land Size Density Plot (Non-Strata) before cleaning."), x = "Land Size (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(nonstrata_full, aes(log(LAND_ARE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("Land Size Density Plot (Non-Strata) before cleaning."), x = "Land Size (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+#after cleaning
+ggplot(nonstrata_full[which(nonstrata_full$anomaly_score <= 0.5),], aes(log(LAND_ARE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("Land Size Density Plot (Non-Strata) after cleaning."), x = "Land Size (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#house area
+#before cleaning
+#in one
+zzr = data.frame()
+zzr[1:788943,1] = temp$AREA_HSE
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = nonstrata_full$AREA_HSE[which(nonstrata_full$anomaly_score<=0.5)]
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("house", "type")
+
+ggplot(zzr, aes(log(house), fill = type)) + geom_density(alpha = 0.5) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("House Area Density Plot (Non-Strata)."), x = "House Area (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#separately
+ggplot(improved_data[which(improved_data$d_strata == 0 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),], aes(log(AREA_HSE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,10)) + labs(title = paste0("House Area Density Plot (Non-Strata) before cleaning."), x = "House Area  (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(nonstrata_full, aes(log(AREA_HSE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,10)) + labs(title = paste0("House Area Density Plot (Non-Strata) before cleaning."), x = "House Area  (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+#after cleaning
+ggplot(nonstrata_full[which(nonstrata_full$anomaly_score <= 0.5),], aes(log(AREA_HSE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,10)) + labs(title = paste0("House Area  Density Plot (Non-Strata) after cleaning."), x = "House Area (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#year build
+#before cleaning
+#in one
+zzr = data.frame()
+zzr[1:788943,1] = temp$YEAR_BUI
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = nonstrata_full$YEAR_BUI[which(nonstrata_full$anomaly_score<=0.5)]
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("year", "type")
+
+ggplot(zzr, aes(log(year), fill = type)) + geom_density(alpha = 0.5) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("Year Build Density Plot (Non-Strata)."), x = "Year Build", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#separately
+ggplot(improved_data[which(improved_data$d_strata == 0 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),], aes(YEAR_BUI)) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,2020,500)) + coord_cartesian(xlim = c(0,2020)) + labs(title = paste0("Year Build Density Plot (Non-Strata) before cleaning."), x = "Year Build", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(nonstrata_full, aes(YEAR_BUI)) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,2020,500)) + coord_cartesian(xlim = c(0,2020)) + labs(title = paste0("Year Build Density Plot (Non-Strata) before cleaning."), x = "Year Build", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+#after cleaning
+ggplot(nonstrata_full[which(nonstrata_full$anomaly_score <= 0.5),], aes(YEAR_BUI)) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,2020,500)) + coord_cartesian(xlim = c(0,2020)) + labs(title = paste0("Year Build Density Plot (Non-Strata) after cleaning."), x = "Year Build", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+
+#strata
+#plot continuous variables' density with same x scale
+#sale price
+#before cleaning
+#in one
+#trial one
+zzr = data.frame()
+zzr[1:392167,1] = temp$SALE1
+zzr[1:392167,2] = "Original"
+zzr[392168:782039,1] = nonstrata_full$SALE1[which(nonstrata_full$anomaly_score<=0.5)]
+zzr[392168:782039,2] = "iForest"
+colnames(zzr) = c("price", "type")
+
+ggplot(zzr, aes(log(price), fill = type)) + geom_density(alpha = 0.5) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("Sale Price Density Plot (Strata)."), x = "Sale Price (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#trial two
+zzr = data.frame()
+zzr[1:392167,1] = c(rep(1, 4424),  rep(2, 35583), rep(3, 39234), rep(4, 38411), rep(5, 39309), rep(6, 40600), rep(7, 39001), rep(8, 39289), rep(9, 38018), rep(10, 39347), rep(11, 35062), rep(12, 3889))
+zzr[1:392167,2] = "Original"
+zzr[392168:782039,1] = c(rep(1, 3910),  rep(2, 35549), rep(3, 39200), rep(4, 38370), rep(5, 39225), rep(6, 40495), rep(7, 38900), rep(8, 39108), rep(9, 37904), rep(10, 39191), rep(11, 34565), rep(12, 3455))
+zzr[392168:782039,2] = "iForest"
+colnames(zzr) = c("price", "type")
+
+
+ggplot(zzr, aes(price, fill = type)) + geom_bar(position = "dodge")  + scale_x_continuous(breaks = seq(1,12,1), labels = c("<40k", "40k-78k", "78k-108k", "108k-143.5k", "143.5k-194k", "194k-260k", "260k-325k", "325k-390k", "390k-465k", "465k-605k", "605k-1225k", ">1225k")) + scale_y_continuous(breaks = seq(0,80000,20000)) + coord_cartesian(xlim = c(1,12)) + labs(title = paste0("Sale Price Bar Chart (Strata)."), x = "Sale Price Range", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+
+#separately
+ggplot(improved_data[which(improved_data$d_strata == 1 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),], aes(log(SALE1))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(2,18)) + labs(title = paste0("Sale Price Density Plot (Strata) before cleaning."), x = "Sale Price (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(strata_full, aes(log(SALE1))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(2,18)) + labs(title = paste0("Sale Price Density Plot (Strata) before cleaning."), x = "Sale Price (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+#after cleaning
+ggplot(strata_full[which(strata_full$anomaly_score <= 0.5),], aes(log(SALE1))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(2,18)) + labs(title = paste0("Sale Price Density Plot (Strata) after cleaning."), x = "Sale Price (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#house area
+#before cleaning
+#in one
+zzr = data.frame()
+zzr[1:392167,1] = temp$AREA_HSE
+zzr[1:392167,2] = "Original"
+zzr[392168:782039,1] = nonstrata_full$AREA_HSE[which(nonstrata_full$anomaly_score<=0.5)]
+zzr[392168:782039,2] = "iForest"
+colnames(zzr) = c("house", "type")
+
+ggplot(zzr, aes(log(house), fill = type)) + geom_density(alpha = 0.5) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("House Area Density Plot (Strata)."), x = "House Area (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#separately
+ggplot(improved_data[which(improved_data$d_strata == 1 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),], aes(log(AREA_HSE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,10)) + labs(title = paste0("House Area Density Plot (Strata) before cleaning."), x = "House Area  (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(strata_full, aes(log(AREA_HSE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,10)) + labs(title = paste0("House Area Density Plot (Strata) before cleaning."), x = "House Area  (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+#after cleaning
+ggplot(strata_full[which(strata_full$anomaly_score <= 0.5),], aes(log(AREA_HSE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,10)) + labs(title = paste0("House Area  Density Plot (Strata) after cleaning."), x = "House Area  (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#year build
+#before cleaning
+#in one
+zzr = data.frame()
+zzr[1:392167,1] = temp$YEAR_BUI
+zzr[1:392167,2] = "Original"
+zzr[392168:782039,1] = nonstrata_full$YEAR_BUI[which(nonstrata_full$anomaly_score<=0.5)]
+zzr[392168:782039,2] = "iForest"
+colnames(zzr) = c("year", "type")
+
+ggplot(zzr, aes(log(year), fill = type)) + geom_density(alpha = 0.5) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,15)) + labs(title = paste0("Year Build Density Plot (Strata)."), x = "Year Build", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+#separately
+ggplot(improved_data[which(improved_data$d_strata == 1 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),], aes(log(AREA_HSE))) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(0,10)) + labs(title = paste0("House Area Density Plot (Strata) before cleaning."), x = "House Area  (log)", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(strata_full, aes(YEAR_BUI)) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,2020,500)) + coord_cartesian(xlim = c(0,2020)) + labs(title = paste0("Year Build Density Plot (Strata) before cleaning."), x = "Year Build", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+#after cleaning
+ggplot(strata_full[which(strata_full$anomaly_score <= 0.5),], aes(YEAR_BUI)) + geom_density(color = "black", fill = "grey") + scale_x_continuous(breaks = seq(0,2020,500)) + coord_cartesian(xlim = c(0,2020)) + labs(title = paste0("Year Build Density Plot (Strata) after cleaning."), x = "Year Build", y = "Density") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+#plot discrete variables
+```{r}
+#nonstrata
+temp = improved_data[which(improved_data$d_strata == 0 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),]
+
+temp_iforest = nonstrata_full[which(nonstrata_full$anomaly_score <= 0.5),]
+
+temp$BEDS[which(temp$BEDS == 0)] = NA
+temp$BATHS[which(temp$BATHS == 0)] = NA
+temp$numrooms[which(temp$numrooms == 0)] = NA
+temp$cars[which(temp$cars == 0)] = NA
+temp$LAND_ARE[which(log(temp$LAND_ARE) < 0)] = NA
+temp$YEAR_BUI[which(temp$YEAR_BUI == 0)] = NA
+temp$AREA_HSE[which(log(temp$AREA_HSE) <= 0)] = NA
+temp$AREA_HSE[which(temp$AREA_HSE == temp$LAND_ARE)] = NA
+#bed
+zzr = data.frame()
+zzr[1:788943,1] = temp$BEDS
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = temp_iforest$BEDS
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("bed", "type")
+
+ggplot(zzr, aes(bed, fill = type)) + geom_bar(position = "dodge") + scale_x_continuous(breaks = seq(1,11,1)) + scale_y_continuous(breaks = seq(0,300000,100000)) + coord_cartesian(xlim = c(0,12)) + labs(title = paste0("Bedrooms Bar Chart (Non-Strata)."), x = "Bedroom No.", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+#bath
+zzr = data.frame()
+zzr[1:788943,1] = temp$BATHS
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = temp_iforest$BATHS
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("bath", "type")
+
+ggplot(zzr, aes(bath, fill = type)) + geom_bar(position = "dodge") + scale_x_continuous(breaks = seq(1,11,1)) + scale_y_continuous(breaks = seq(0,300000,100000)) + coord_cartesian(xlim = c(0,6)) + labs(title = paste0("Bathrooms Bar Chart (Non-Strata)."), x = "Bedroom No.", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+#other rooms
+zzr = data.frame()
+zzr[1:788943,1] = temp$numrooms
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = temp_iforest$numrooms
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("other", "type")
+
+ggplot(zzr, aes(other, fill = type)) + geom_bar(position = "dodge") + scale_x_continuous(breaks = seq(1,11,1)) + scale_y_continuous(breaks = seq(0,300000,100000)) + coord_cartesian(xlim = c(0,12)) + labs(title = paste0("Other Rooms Bar Chart (Non-Strata)."), x = "Bedroom No.", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+#cars
+zzr = data.frame()
+zzr[1:788943,1] = temp$cars
+zzr[1:788943,2] = "Original"
+zzr[788944:1573094,1] = temp_iforest$cars
+zzr[788944:1573094,2] = "iForest"
+colnames(zzr) = c("cars", "type")
+
+ggplot(zzr, aes(cars, fill = type)) + geom_bar(position = "dodge") + scale_x_continuous(breaks = seq(1,11,1)) + scale_y_continuous(breaks = seq(0,300000,100000)) + coord_cartesian(xlim = c(0,7)) + labs(title = paste0("Car Parks Bar Chart (Non-Strata)."), x = "Bedroom No.", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+
+#strata
+temp = improved_data[which(improved_data$d_strata == 1 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),]
+
+temp_iforest = strata_full[which(strata_full$anomaly_score <= 0.5),]
+
+temp$BEDS[which(temp$BEDS == 0)] = NA
+temp$BATHS[which(temp$BATHS == 0)] = NA
+temp$numrooms[which(temp$numrooms == 0)] = NA
+temp$cars[which(temp$cars == 0)] = NA
+temp$LAND_ARE[which(log(temp$LAND_ARE) < 0)] = NA
+temp$YEAR_BUI[which(temp$YEAR_BUI == 0)] = NA
+temp$AREA_HSE[which(log(temp$AREA_HSE) <= 0)] = NA
+#bed
+zzr = data.frame()
+zzr[1:392167,1] = temp$BEDS
+zzr[1:392167,2] = "Original"
+zzr[392168:782039,1] = temp_iforest$BEDS
+zzr[392168:782039,2] = "iForest"
+colnames(zzr) = c("bed", "type")
+
+ggplot(zzr, aes(bed, fill = type)) + geom_bar(position = "dodge") + scale_x_continuous(breaks = seq(1,11,1)) + scale_y_continuous(breaks = seq(0,300000,100000)) + coord_cartesian(xlim = c(0,8)) + labs(title = paste0("Bedrooms Bar Chart (Strata)."), x = "Bedroom No.", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+#bath
+zzr = data.frame()
+zzr[1:392167,1] = temp$BATHS
+zzr[1:392167,2] = "Original"
+zzr[392168:782039,1] = temp_iforest$BATHS
+zzr[392168:782039,2] = "iForest"
+colnames(zzr) = c("bath", "type")
+
+ggplot(zzr, aes(bath, fill = type)) + geom_bar(position = "dodge") + scale_x_continuous(breaks = seq(1,11,1)) + scale_y_continuous(breaks = seq(0,300000,100000)) + coord_cartesian(xlim = c(0,5)) + labs(title = paste0("Bathrooms Bar Chart (Strata)."), x = "Bedroom No.", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+#other rooms
+zzr = data.frame()
+zzr[1:392167,1] = temp$numrooms
+zzr[1:392167,2] = "Original"
+zzr[392168:782039,1] = temp_iforest$numrooms
+zzr[392168:782039,2] = "iForest"
+colnames(zzr) = c("other", "type")
+
+ggplot(zzr, aes(other, fill = type)) + geom_bar(position = "dodge") + scale_x_continuous(breaks = seq(1,11,1)) + scale_y_continuous(breaks = seq(0,300000,100000)) + coord_cartesian(xlim = c(0,10)) + labs(title = paste0("Other Rooms Bar Chart (Strata)."), x = "Bedroom No.", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+
+#cars
+zzr = data.frame()
+zzr[1:392167,1] = temp$cars
+zzr[1:392167,2] = "Original"
+zzr[392168:782039,1] = temp_iforest$cars
+zzr[392168:782039,2] = "iForest"
+colnames(zzr) = c("cars", "type")
+
+ggplot(zzr, aes(cars, fill = type)) + geom_bar(position = "dodge") + scale_x_continuous(breaks = seq(1,11,1)) + scale_y_continuous(breaks = seq(0,300000,100000)) + coord_cartesian(xlim = c(0,5)) + labs(title = paste0("Car Parks Bar Chart (Strata)."), x = "Bedroom No.", y = "Frequency") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+#heatmap
+```{r}
+temp = temp_forest_test[1,]
+temp[1:22801, c(1,3)] =  expand.grid(seq(0,15,0.1), seq(3,18,0.1))
+temp[, c(2, 4:13)] =  NA
+temp_isoforest = isolation.forest(temp_forest_test[,c(1,3)], sample_size = 32768, ntrees = 500, ntry = 10, max_depth = 60)
+temp$anomaly_score = predict(temp_isoforest, temp)
+temp$anomaly_score = predict(isoforest_test_nonstrata, temp)
+ggplot(temp, aes(log.nonstrata_full.LAND_ARE., log.nonstrata_full.SALE1., fill = anomaly_score)) + geom_tile() + scale_fill_gradient(low = "yellow", high = "red") + labs(title = paste0("The Heatmap of Anomaly Scores"), x = "Land Size (log)", y = "Sale Price (log)") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+#percentile of variable
+```{r}
+#land
+nonstrata = improved_data[which(improved_data$d_strata == 0 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),]
+
+nonstrata$BEDS[which(nonstrata$BEDS == 0)] = NA
+nonstrata$BATHS[which(nonstrata$BATHS == 0)] = NA
+nonstrata$numrooms[which(nonstrata$numrooms == 0)] = NA
+nonstrata$cars[which(nonstrata$cars == 0)] = NA
+nonstrata$LAND_ARE[which(log(nonstrata$LAND_ARE) < 0)] = NA
+nonstrata$YEAR_BUI[which(nonstrata$YEAR_BUI == 0)] = NA
+nonstrata$AREA_HSE[which(log(nonstrata$AREA_HSE) <= 0)] = NA
+nonstrata$AREA_HSE[which(nonstrata$AREA_HSE == nonstrata$LAND_ARE)] = NA
+
+quantile(nonstrata$LAND_ARE, c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+min(nonstrata$LAND_ARE)
+max(nonstrata$LAND_ARE)
+
+
+quantile(nonstrata_full$LAND_ARE[which(nonstrata_full$anomaly_score <= 0.5)], c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+min(nonstrata_full$LAND_ARE[which(nonstrata_full$anomaly_score <= 0.5)])
+max(nonstrata_full$LAND_ARE[which(nonstrata_full$anomaly_score <= 0.5)])
+
+#price
+quantile(nonstrata$SALE1, c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+min(nonstrata$SALE1)
+max(nonstrata$SALE1)
+
+
+quantile(nonstrata_full$SALE1[which(nonstrata_full$anomaly_score <= 0.5)], c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+min(nonstrata_full$SALE1[which(nonstrata_full$anomaly_score <= 0.5)])
+max(nonstrata_full$SALE1[which(nonstrata_full$anomaly_score <= 0.5)])
+
+
+#price strata
+strata = improved_data[which(improved_data$d_strata == 1 & improved_data$YEAR_BUI <= improved_data$year & improved_data$quarter_num > 0  & improved_data$SALE1 > 0),]
+strata$BEDS[which(strata$BEDS == 0)] = NA
+strata$BATHS[which(strata$BATHS == 0)] = NA
+strata$numrooms[which(strata$numrooms == 0)] = NA
+strata$cars[which(strata$cars == 0)] = NA
+strata$LAND_ARE[which(log(strata$LAND_ARE) < 0)] = NA
+strata$YEAR_BUI[which(strata$YEAR_BUI == 0)] = NA
+strata$AREA_HSE[which(log(strata$AREA_HSE) <= 0)] = NA
+
+quantile(strata$SALE1, c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+min(strata$SALE1)
+max(strata$SALE1)
+
+
+quantile(strata_full$SALE1[which(strata_full$anomaly_score <= 0.5)], c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+min(strata_full$SALE1[which(strata_full$anomaly_score <= 0.5)])
+max(strata_full$SALE1[which(strata_full$anomaly_score <= 0.5)])
+```
+
+
+#percentile show
+```{r}
+#full pool
+length(which(full$SALE1 <= 29250))
+length(which(full$SALE1 > 29250 & full$SALE1 <= 80000))
+length(which(full$SALE1 > 80000 & full$SALE1 <= 110000))
+length(which(full$SALE1 > 110000 & full$SALE1 <= 145000))
+length(which(full$SALE1 > 145000 & full$SALE1 <= 192000))
+length(which(full$SALE1 > 192000 & full$SALE1 <= 265000))
+length(which(full$SALE1 > 265000 & full$SALE1 <= 340000))
+length(which(full$SALE1 > 340000 & full$SALE1 <= 415000))
+length(which(full$SALE1 > 415000 & full$SALE1 <= 510000))
+length(which(full$SALE1 > 510000 & full$SALE1 <= 680000))
+length(which(full$SALE1 > 680000 & full$SALE1 <= 1650000))
+length(which(full$SALE1 > 1650000))
+
+
+length(which(full$SALE1[full$anomaly_score <= 0.5] <= 29250))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 29250 & full$SALE1[full$anomaly_score <= 0.5] <= 80000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 80000 & full$SALE1[full$anomaly_score <= 0.5] <= 110000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 110000 & full$SALE1[full$anomaly_score <= 0.5] <= 145000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 145000 & full$SALE1[full$anomaly_score <= 0.5] <= 192000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 192000 & full$SALE1[full$anomaly_score <= 0.5] <= 265000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 265000 & full$SALE1[full$anomaly_score <= 0.5] <= 340000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 340000 & full$SALE1[full$anomaly_score <= 0.5] <= 415000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 415000 & full$SALE1[full$anomaly_score <= 0.5] <= 510000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 510000 & full$SALE1[full$anomaly_score <= 0.5] <= 680000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 680000 & full$SALE1[full$anomaly_score <= 0.5] <= 1650000))
+length(which(full$SALE1[full$anomaly_score <= 0.5] > 1650000))
+
+
+#nonstrata 
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 26500))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 26500 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 82000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 82000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 110000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 110000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 145000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 145000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 190790))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 190790 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 269000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 269000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 350000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 350000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 430000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 430000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 530000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 530000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 725000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 725000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] <= 1825000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 0] > 1825000))
+
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 26500))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 26500 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 82000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 82000 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 110000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 110000 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 145000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 145000 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 190790))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 190790 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 269000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 269000 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 350000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 350000 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 430000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 430000 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 530000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 530000 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 725000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 725000 & full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] <= 1825000))
+length(which(full$SALE1[full$d_strata == 0 & full$anomaly_score <= 0.5] > 1825000))
+#strata
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 40000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 40000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 78000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 78000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 108000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 108000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 143500))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 143500 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 194000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 194000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 260000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 260000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 325000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 325000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 390000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 390000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 465000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 465000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 605000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 605000 & finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] <= 1225000))
+length(which(finaldatasetformodel_noiso$SALE1[finaldatasetformodel_noiso$d_strata == 1] > 1225000))
+
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 40000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 40000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 78000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 78000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 108000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 108000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 143500))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 143500 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 194000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 194000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 260000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 260000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 325000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 325000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 390000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 390000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 465000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 465000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 605000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 605000 & full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] <= 1225000))
+length(which(full$SALE1[full$d_strata == 1 & full$anomaly_score <= 0.5] > 1225000))
+
+
+#land size
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 296))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 296 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 501))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 501 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 601))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 601 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 680))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 680 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 696))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 696 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 714))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 714 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 740))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 740 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 794))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 794 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 860))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 860 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 1026))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 1026 & full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] <= 20126))
+length(which(full$LAND_ARE[full$anomaly_score <= 0.5 & full$d_strata == "strata"] > 20126))
+```
+
+
+#the other method trial, however, we use pooled isolation forest, just keep this trial codes #yearly new isotree non-strata
+```{r}
+n=0
+for (i in 1988:2020) {
+  set.seed(717)
+  temp = improved_data %>%
+    filter(year(improved_data$DATE1) == i)
+  temp = temp %>%
+    filter(temp$d_strata == 0)
+  temp = temp %>%
+    filter(temp$SALE1 > 20)
+  print(length(which(temp$YEAR_BUI>i)))
+  temp = temp %>%
+    filter(temp$YEAR_BUI <= i)
+
+  temp$BEDS[which(temp$BEDS == 0)] = NA
+  temp$BATHS[which(temp$BATHS == 0)] = NA
+  temp$numrooms[which(temp$numrooms == 0)] = NA
+  temp$cars[which(temp$cars == 0)] = NA
+  temp$LAND_ARE[which(log(temp$LAND_ARE) < 0)] = NA
+  temp$YEAR_BUI[which(temp$YEAR_BUI == 0)] = NA
+  temp$AREA_HSE[which(log(temp$AREA_HSE) <= 0)] = NA
+  
+  
+
+  
+  temp_forest_test = data.frame(log(temp$LAND_ARE), log(temp$SALE1), log(temp$AREA_HSE), temp$YEAR_BUI, temp$BEDS, temp$BATHS, temp$numrooms, temp$cars, temp$centlat, temp$centlong, temp$LA_DESC, temp$PROP_CLA)
+  
+  
+  temp$na_count = apply(temp_forest_test, 1, function(x) sum(is.na(x)))
+  
+
+  isoforest_test = isolation.forest(temp_forest_test, ntrees = 500, ndim = 3, ntry = 10, max_depth = 60)
+
+  temp$anomaly_score = predict(isoforest_test, temp_forest_test)
+
+  #temp_forest_test$anomaly_score = predict(isoforest_test, temp_forest_test)
+  #temp_forest_test$depth = predict(isoforest_test, temp_forest_test, type = "avg_depth")
+
+  #temp$outlier = ifelse(temp$anomaly_score > 0.45, "Unusual", "Normal")
+
+
+  #print(ggplot(temp, aes(log(LAND_ARE), log(SALE1), color = outlier)) + geom_point() + labs(title = paste0("Price VS Land Area (Non-Strata) in ", i, " by Isolation Forest.", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5)))
+
+  #print(ggplot(temp[which(temp$outlier == "Unusual"),], aes(centlong, centlat)) + geom_point() + labs(title = paste0("Price VS Land Area (Non-Strata) in ", i, " by Isolation Forest.", sep=""), x = "Longitude", y = "Latitude") + theme(plot.title = element_text(hjust = 0.5)))
+  
+  #print(ggplot(temp[which(temp$outlier == "Normal"),], aes(centlong, centlat)) + geom_point() + labs(title = paste0("Price VS Land Area (Non-Strata) in ", i, " by Isolation Forest.", sep=""), x = "Longitude", y = "Latitude") + theme(plot.title = element_text(hjust = 0.5)))
+  
+  #print(ggplot(temp, aes(centlong, centlat, color = outlier)) + geom_point() + labs(title = paste0("Price VS Land Area (Non-Strata) in ", i, " by Isolation Forest.", sep=""), x = "Longitude", y = "Latitude") + theme(plot.title = element_text(hjust = 0.5)))
+  
+  
+  print(i)
+  
+  assign(paste0("temp_", i, "_nonstrata", sep = ""), temp)
+  
+  n = n + nrow(temp)
+}
+```
+
+
+```{r}
+expert_nonstrata = data.frame()
+for (i in 1988:2020) {
+  temp = get(paste0("temp_", i, "_nonstrata", sep = ""))
+    
+  temp = temp %>%
+    filter(temp$anomaly_score <= 0.5)
+  
+  expert_nonstrata = rbind(expert_nonstrata, temp)
+}
+
+
+
+for (i in 1988:2020) {
+  temp = get(paste0("temp_", i, "_nonstrata", sep = ""))
+  
+  print(i)
+  print(length(which(temp$anomaly_score <= 0.5))/nrow(temp))
+  print(summary(temp$SALE1[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$LAND_ARE[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$BEDS[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$BATHS[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$numrooms[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$AREA_HSE[which(temp$anomaly_score <= 0.5)]))
+  
+  print(quantile(temp$SALE1[which(temp$anomaly_score <= 0.5)], c(0.01, 0.99)))
+  print(quantile(temp$LAND_ARE[which(temp$anomaly_score <= 0.5 & !is.na(temp$LAND_ARE))], c(0.01, 0.99)))
+}
+
+```
+
+
+#starta
+```{r}
+n=0
+for (i in 1988:2020) {
+  set.seed(717)
+  temp = improved_data %>%
+    filter(year(improved_data$DATE1) == i)
+  temp = temp %>%
+    filter(temp$d_strata == 1)
+  temp = temp %>%
+    filter(temp$SALE1 > 20)
+  print(length(which(temp$YEAR_BUI>i)))
+  temp = temp %>%
+    filter(temp$YEAR_BUI <= i)
+
+  temp$BEDS[which(temp$BEDS == 0)] = NA
+  temp$BATHS[which(temp$BATHS == 0)] = NA
+  temp$numrooms[which(temp$numrooms == 0)] = NA
+  temp$cars[which(temp$cars == 0)] = NA
+  temp$AREA_HSE[which(log(temp$AREA_HSE) <= 0)] = NA
+  temp$YEAR_BUI[which(temp$YEAR_BUI == 0)] = NA
+  temp$LAND_ARE = NA
+  
+
+  
+  temp_forest_test = data.frame(log(temp$AREA_HSE), log(temp$SALE1), temp$YEAR_BUI, temp$BEDS, temp$BATHS, temp$numrooms, temp$cars, temp$centlat, temp$centlong, temp$LA_DESC, temp$PROP_CLA)
+  
+  
+  temp$na_count = apply(temp_forest_test, 1, function(x) sum(is.na(x)))
+  
+
+  isoforest_test = isolation.forest(temp_forest_test, ntrees = 500, ndim = 3, ntry = 10, max_depth = 60)
+
+  temp$anomaly_score = predict(isoforest_test, temp_forest_test)
+
+  #temp_forest_test$anomaly_score = predict(isoforest_test, temp_forest_test)
+  #temp_forest_test$depth = predict(isoforest_test, temp_forest_test, type = "avg_depth")
+
+  #temp$outlier = ifelse(temp$anomaly_score > 0.45, "Unusual", "Normal")
+
+
+  #print(ggplot(temp, aes(log(LAND_ARE), log(SALE1), color = outlier)) + geom_point() + labs(title = paste0("Price VS Land Area (Strata) in ", i, " by Isolation Forest.", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5)))
+
+  #print(ggplot(temp[which(temp$outlier == "Unusual"),], aes(centlong, centlat)) + geom_point() + labs(title = paste0("Price VS Land Area (Strata) in ", i, " by Isolation Forest.", sep=""), x = "Longitude", y = "Latitude") + theme(plot.title = element_text(hjust = 0.5)))
+  
+  #print(ggplot(temp[which(temp$outlier == "Normal"),], aes(centlong, centlat)) + geom_point() + labs(title = paste0("Price VS Land Area (Strata) in ", i, " by Isolation Forest.", sep=""), x = "Longitude", y = "Latitude") + theme(plot.title = element_text(hjust = 0.5)))
+  
+  #print(ggplot(temp, aes(centlong, centlat, color = outlier)) + geom_point() + labs(title = paste0("Price VS Land Area (Strata) in ", i, " by Isolation Forest.", sep=""), x = "Longitude", y = "Latitude") + theme(plot.title = element_text(hjust = 0.5)))
+  
+  
+  print(i)
+  
+  assign(paste0("temp_", i, "_strata", sep = ""), temp)
+  
+  n = n + nrow(temp)
+}
+```
+
+
+```{r}
+expert_strata = data.frame()
+for (i in 1988:2020) {
+  temp = get(paste0("temp_", i, "_strata", sep = ""))
+    
+  temp = temp %>%
+    filter(temp$anomaly_score <= 0.5)
+  
+  expert_strata = rbind(expert_strata, temp)
+}
+
+
+
+for (i in 1988:2020) {
+  temp = get(paste0("temp_", i, "_strata", sep = ""))
+  
+  print(i)
+  print(length(which(temp$anomaly_score <= 0.5))/nrow(temp))
+  print(summary(temp$SALE1[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$AREA_HSE[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$BEDS[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$BATHS[which(temp$anomaly_score <= 0.5)]))
+  print(summary(temp$numrooms[which(temp$anomaly_score <= 0.5)]))
+  
+  print(quantile(temp$SALE1[which(temp$anomaly_score <= 0.5)], c(0.01, 0.99)))
+  print(quantile(temp$AREA_HSE[which(temp$anomaly_score <= 0.5 & !is.na(temp$AREA_HSE))], c(0.01, 0.99)))
+}
+
+```
+
+
+#graphs
+```{r}
+#non-strata
+for (i in c(1989, 1999, 2009, 2019)) {
+  
+  temp = get(paste0("temp_", i, "_nonstrata", sep = ""))
+  
+  temp$outlier = ifelse(temp$anomaly_score > 0.5, "Unusual", "Normal")
+
+
+  print(ggplot(temp, aes(log(LAND_ARE), log(SALE1), color = outlier)) + geom_point() + labs(title = paste0("Anomaly (Non-Strata) in ", i, " (Price VS Land size).", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5)))
+
+  
+  print(ggplot(temp, aes(centlong, centlat, color = outlier)) + geom_point() + labs(title = paste0("Anomaly (Non-Strata) in ", i, " (Coordinates).", sep=""), x = "Longitude", y = "Latitude") + theme(plot.title = element_text(hjust = 0.5)))
+}
+
+
+#strata
+for (i in c(1989, 1999, 2009, 2019)) {
+  
+  temp = get(paste0("temp_", i, "_strata", sep = ""))
+  
+  temp$outlier = ifelse(temp$anomaly_score > 0.5, "Unusual", "Normal")
+
+
+  print(ggplot(temp, aes(log(AREA_HSE), log(SALE1), color = outlier)) + geom_point() + labs(title = paste0("Anomaly (Strata) in ", i, " (Price VS House Area).", sep=""), x = "House Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5)))
+
+  
+  print(ggplot(temp, aes(centlong, centlat, color = outlier)) + geom_point() + labs(title = paste0("Anomaly (Strata) in ", i, " (Coordinates).", sep=""), x = "Longitude", y = "Latitude") + theme(plot.title = element_text(hjust = 0.5)))
+}
+
+
+
+
+for (i in c(1989, 1999, 2009, 2019)) {
+  
+  temp = get(paste0("temp_", i, "_nonstrata", sep = ""))
+  
+  temp = temp %>%
+    filter(temp$anomaly_score <= 0.5)
+
+
+  print(ggplot(temp, aes(log(LAND_ARE))) + geom_histogram(binwidth = 0.1) + labs(title = paste0("Land Area Histogram (Non-Strata) in ", i, sep=""), x = "Land Size(log)") + theme(plot.title = element_text(hjust = 0.5)))
+
+}
+
+```
+
+
+#zscore strats
+```{r}
+improved_data$sale_land = NA
+improved_data$sale_hse = NA
+
+improved_data$sale_land[which(improved_data$d_strata == 0)] = log(improved_data$SALE1[which(improved_data$d_strata == 0)]/improved_data$LAND_ARE[which(improved_data$d_strata == 0)])
+improved_data$sale_hse[which(improved_data$d_strata == 1)] = log(improved_data$SALE1[which(improved_data$d_strata == 1)]/improved_data$AREA_HSE[which(improved_data$d_strata == 1)])
+```
+
+
+```{r}
+improved_data$zscore_sale_land = NA
+improved_data$zscore_sale_hse = NA
+improved_data$DATE1 = ymd(improved_data$DATE1)
+
+temp = improved_data %>%
+  filter(100>improved_data$sale_hse & improved_data$sale_hse>-100)
+
+improved_data$zscore_sale_hse[which(100>improved_data$sale_hse & improved_data$sale_hse>-100)] = (temp$sale_hse - mean(temp$sale_hse))/sd(temp$sale_hse)
+  
+temp = improved_data %>%
+  filter(100>improved_data$sale_land & improved_data$sale_land>-100)
+
+improved_data$zscore_sale_land[which(100>improved_data$sale_land & improved_data$sale_land>-100)] = (temp$sale_land - mean(temp$sale_land))/sd(temp$sale_land)
+
+
+improved_data$zscore_sale_land_annual = NA
+improved_data$zscore_sale_hse_annual = NA
+
+for (i in 1988:2020) {
+  temp = improved_data[which(year(improved_data$DATE1) == i),]
+  
+  temp_zscore = temp %>%
+  filter(100>temp$sale_hse & temp$sale_hse>-100)
+
+  temp$zscore_sale_hse_annual[which(100>temp$sale_hse & temp$sale_hse>-100)] = (temp_zscore$sale_hse - mean(temp_zscore$sale_hse))/sd(temp_zscore$sale_hse)
+  
+  improved_data$zscore_sale_hse_annual[which(year(improved_data$DATE1) == i)] = temp$zscore_sale_hse_annual
+  
+  
+  temp = improved_data[which(year(improved_data$DATE1) == i),]
+  
+  temp_zscore = temp %>%
+    filter(100>temp$sale_land & temp$sale_land>-100)
+
+  temp$zscore_sale_land_annual[which(100>temp$sale_land & temp$sale_land>-100)] = (temp_zscore$sale_land - mean(temp_zscore$sale_land))/sd(temp_zscore$sale_land)
+  
+  improved_data$zscore_sale_land_annual[which(year(improved_data$DATE1) == i)] = temp$zscore_sale_land_annual
+}
+
+```
+
+
+#check data
+```{r}
+for (i in 1988:2020) {
+  temp_graph = temp %>%
+    filter(year(temp$DATE1) == i)
+  temp_graph = temp_graph %>%
+    filter(temp_graph$d_strata == 0)
+  
+  print(i)
+  print(paste0("0 price:  ", length(which(temp_graph$SALE1 == 0))))
+  
+  print(paste0("0 land:  ", length(which(temp_graph$LAND_ARE == 0))))
+  
+  print(summary(temp_graph$zscore_sale_land_annual))
+  
+  print(nrow(temp_graph))
+}
+
+
+
+for (i in 1988:2020) {
+  temp_graph = temp %>%
+    filter(year(temp$DATE1) == i)
+  temp_graph = temp_graph %>%
+    filter(temp_graph$d_strata == 1)
+  
+  print(i)
+  print(paste0("0 price:  ", length(which(temp_graph$SALE1 == 0))))
+  
+  print(paste0("0 house:  ", length(which(temp_graph$AREA_HSE == 0))))
+  
+  print(summary(temp_graph$zscore_sale_hse_annual))
+  
+  print(nrow(temp_graph))
+}
+
+#nonstrata
+n=0
+for (i in 1988:2020) {
+  temp_graph = temp %>%
+    filter(year(temp$DATE1) == i)
+  temp_graph = temp_graph %>%
+    filter(temp_graph$d_strata == 0)
+  
+  
+  #print(summary(temp_graph$SALE1[which(abs(temp_graph$zscore_sale_land_annual) <= 3)]))
+  
+  print(summary(temp_graph$LAND_ARE[which(abs(temp_graph$zscore_sale_land_annual) <= 3)]))
+  
+  print(nrow(temp_graph))
+  
+  temp_na = temp_graph[which(temp_graph$LAND_ARE == 0),]
+  
+  max = max(temp_graph$SALE1[which(abs(temp_graph$zscore_sale_land_annual) <= 3)])
+  min = min(temp_graph$SALE1[which(abs(temp_graph$zscore_sale_land_annual) <= 3)])
+  
+  temp_na = temp_na %>%
+    filter(temp_na$SALE1 >= min)
+  
+  temp_na = temp_na %>%
+    filter(temp_na$SALE1 <= max)
+  
+  
+  print((length(which(abs(temp_graph$zscore_sale_land_annual) <= 3)) + nrow(temp_na))/nrow(temp_graph))
+  
+  print(nrow(temp_na))
+  
+  n = n + length(which(abs(temp_graph$zscore_sale_land_annual) <= 3)) + nrow(temp_na)
+  
+  temp_graph = rbind(temp_graph[which(abs(temp_graph$zscore_sale_land_annual) <= 3),], temp_na)
+  
+  assign(paste0("temp_", i, "_land", sep=""), temp_graph)
+}
+
+
+
+for (i in 1988:2020) {
+  temp_graph = temp %>%
+    filter(year(temp$DATE1) == i)
+  temp_graph = temp_graph %>%
+    filter(temp_graph$d_strata == 0)
+  
+  temp_graph$outlier = ifelse(abs(temp_graph$zscore_sale_land_annual) > 3, "Unusual", "Normal")
+  temp_graph$outlier[which(is.na(temp_graph$zscore_sale_land_annual) & temp_graph$LAND_ARE != 0)] = "Unusual"
+  
+  print(ggplot(temp_graph, aes(log(LAND_ARE), log(SALE1), color = outlier)) + geom_point() + labs(title = paste0("Price VS Land Area (Non-Strata) in ", i, " by Z-scores.", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5)))
+  print(i)
+}
+
+
+
+#strata
+n=0
+for (i in 1988:2020) {
+  temp_graph = temp %>%
+    filter(year(temp$DATE1) == i)
+  temp_graph = temp_graph %>%
+    filter(temp_graph$d_strata == 1)
+  
+  print(i)
+  
+  print(summary(temp_graph$SALE1[which(abs(temp_graph$zscore_sale_hse_annual) <= 3)]))
+  
+  print(summary(temp_graph$AREA_HSE[which(abs(temp_graph$zscore_sale_hse_annual) <= 3)]))
+  
+  print(nrow(temp_graph))
+  
+  temp_na = temp_graph[which(temp_graph$AREA_HSE == 0),]
+  
+  max = max(temp_graph$SALE1[which(abs(temp_graph$zscore_sale_hse_annual) <= 3)])
+  min = min(temp_graph$SALE1[which(abs(temp_graph$zscore_sale_hse_annual) <= 3)])
+  
+  temp_na = temp_na %>%
+    filter(temp_na$SALE1 >= min)
+  
+  temp_na = temp_na %>%
+    filter(temp_na$SALE1 <= max)
+  
+  
+  print((length(which(abs(temp_graph$zscore_sale_hse_annual) <= 3)) + nrow(temp_na))/nrow(temp_graph))
+  
+  print(nrow(temp_na))
+  
+  n = n + length(which(abs(temp_graph$zscore_sale_hse_annual) <= 3)) + nrow(temp_na)
+  
+  temp_graph = rbind(temp_graph[which(abs(temp_graph$zscore_sale_hse_annual) <= 3),], temp_na)
+  
+  assign(paste0("temp_", i, "_house", sep=""), temp_graph)
+}
+
+
+
+
+for (i in 1988:2020) {
+  temp_graph = temp %>%
+    filter(year(temp$DATE1) == i)
+  temp_graph = temp_graph %>%
+    filter(temp_graph$d_strata == 1)
+  
+  temp_graph$outlier = ifelse(abs(temp_graph$zscore_sale_hse_annual) > 3, "Unusual", "Normal")
+  temp_graph$outlier[which(is.na(temp_graph$zscore_sale_hse_annual) & temp_graph$AREA_HSE != 0)] = "Unusual"
+  
+  print(ggplot(temp_graph, aes(log(AREA_HSE), log(SALE1), color = outlier)) + geom_point() + labs(title = paste0("Price VS Building Area (Strata) in ", i, " by Z-scores.", sep=""), x = "House Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5)))
+  
+  print(i)
+}
+```
+
+
+#zscore land size only
+```{r}
+for (i in 1988:2020) {
+  temp = get(paste0("temp_", i, "_nonstrata", sep=""))
+
+  temp$logland = log(temp$LAND_ARE)
+  
+  temp$zscore_land_annual = (log(temp$LAND_ARE) - mean(log(temp$LAND_ARE)))/sd(log(temp$LAND_ARE))
+  
+  assign(paste0("temp_", i, "_nonstrata", sep=""), temp)
+}
+
+#summary(improved_data_zscore$LAND_ARE[which(improved_data_zscore$zscore_land_annual >= -3 & improved_data_zscore$zscore_land_annual <= 6)])
+```
+
+
+#mahalanobis distance joint distribution
+```{r}
+for (i in 1988:2020) {
+  temp = get(paste0("temp_", i, "_nonstrata", sep=""))
+
+  temp$logland = log(temp$LAND_ARE)
+  temp$logprice = log(temp$SALE1)
+  
+  temp_test = data.frame(temp$logland, temp$logprice)
+  
+  
+  temp_centroid = c(mean(temp_test$temp.logland), mean(temp_test$temp.logprice))
+  print(temp_centroid)
+  
+  temp$MD_land_annual = mahalanobis(temp_test, center = temp_centroid, cov = cov(temp_test))
+  
+  assign(paste0("temp_", i, "_nonstrata", sep=""), temp)
+}
+
+#summary(nonstrata$LAND_ARE[which(nonstrata$MD_land_annual <= 40)])
+```
+
+
+#nonstrata_test
+```{r}
+nonstrata = data.frame()
+for (i in 1988:2020) {
+  temp = get(paste0("temp_", i, "_nonstrata", sep = ""))
+  
+  nonstrata = rbind(nonstrata, temp)
+}
+
+strata = data.frame()
+for (i in 1988:2020) {
+  temp = get(paste0("temp_", i, "_strata", sep = ""))
+  
+  strata = rbind(strata, temp)
+}
+
+nonstrata$anomaly_if = 0
+nonstrata$anomaly_z = 0
+nonstrata$anomaly_md = 0
+nonstrata$anomaly_if_full = 0
+
+nonstrata$anomaly_if[which(nonstrata$anomaly_score > 0.5)] = 1
+nonstrata$anomaly_if_full[which(nonstrata$anomaly_score_full > 0.5)] = 1
+nonstrata$anomaly_z[which(nonstrata$zscore_land_annual < -3 | nonstrata$zscore_land_annual > 6)] = 1
+nonstrata$anomaly_md[which(nonstrata$MD_land_annual > 40)] = 1
+
+nonstrata = nonstrata %>%
+  filter(nonstrata$DATE1 > as.Date("1988-06-30"))
+
+strata = strata %>%
+  filter(strata$DATE1 > as.Date("1988-06-30"))
+```
+
+
+#percentile
+```{r}
+#original
+quantile(nonstrata$LAND_ARE, c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+max(nonstrata$LAND_ARE)
+min(nonstrata$LAND_ARE)
+
+#zscore (-6, 6)
+quantile(nonstrata$LAND_ARE[which(nonstrata$zscore_land_annual >= -3 & nonstrata$zscore_land_annual <= 6)], c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+max(nonstrata$LAND_ARE[which(nonstrata$zscore_land_annual >= -3 & nonstrata$zscore_land_annual <= 6)])
+min(nonstrata$LAND_ARE[which(nonstrata$zscore_land_annual >= -3 & nonstrata$zscore_land_annual <= 6)])
+
+length(nonstrata$LAND_ARE[which(nonstrata$zscore_land_annual >= -3 & nonstrata$zscore_land_annual <= 6)])/796622
+
+
+#isoforest
+quantile(nonstrata$LAND_ARE[which(nonstrata$anomaly_score <= 0.5)], c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+max(nonstrata$LAND_ARE[which(nonstrata$anomaly_score <= 0.5)])
+min(nonstrata$LAND_ARE[which(nonstrata$anomaly_score <= 0.5)])
+
+length(nonstrata$LAND_ARE[which(nonstrata$anomaly_score <= 0.5)])/796622
+
+
+#mahalanobis 33.52
+quantile(nonstrata$LAND_ARE[which(nonstrata$MD_land_annual <= 40)], c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99))
+max(nonstrata$LAND_ARE[which(nonstrata$MD_land_annual <= 40)])
+min(nonstrata$LAND_ARE[which(nonstrata$MD_land_annual <= 40)])
+
+length(nonstrata$LAND_ARE[which(nonstrata$MD_land_annual <= 40)])/796622
+
+
+ggplot(nonstrata[which(nonstrata$MD_land_annual > 40),], aes(log(LAND_ARE), log(SALE1))) + geom_point() + labs(title = paste0("Anomaly (Non-Strata) by Mahalanobis (Price VS Land size).", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(nonstrata[which(nonstrata$anomaly_score > 0.5),], aes(log(LAND_ARE), log(SALE1))) + geom_point() + labs(title = paste0("Anomaly (Non-Strata) by Isolation Forest (Price VS Land size).", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(nonstrata[which(nonstrata$zscore_land_annual < -3 | nonstrata$zscore_land_annual > 6),], aes(log(LAND_ARE), log(SALE1))) + geom_point() + labs(title = paste0("Anomaly (Non-Strata) by Z-score (Price VS Land size).", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5))
+
+#annual
+temp = nonstrata[which(nonstrata$anomaly_if == 1 & nonstrata$anomaly_md == 0 & nonstrata$anomaly_z == 0),]
+temp = rbind(temp, nonstrata[which(nonstrata$anomaly_if == 0 & nonstrata$anomaly_md == 1 & nonstrata$anomaly_z == 0),])
+temp = rbind(temp, nonstrata[which(nonstrata$anomaly_if == 0 & nonstrata$anomaly_md == 0 & nonstrata$anomaly_z == 1),])
+temp$method = NA
+temp$method[which(temp$anomaly_if == 1)] = "Isolation Forest"
+temp$method[which(temp$anomaly_md == 1)] = "Mahalanobis"
+temp$method[which(temp$anomaly_z == 1)] = "Zscore"
+
+ggplot(temp, aes(log(LAND_ARE), log(SALE1), color = method)) + geom_point() + labs(title = paste0("Difference of Anomaly Detection (Non-Strata, Price VS Land size).", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5)) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(3,11))
+
+#pooled
+temp = nonstrata[which(nonstrata$anomaly_if_full == 1 & nonstrata$anomaly_md == 0 & nonstrata$anomaly_z == 0),]
+temp = rbind(temp, nonstrata[which(nonstrata$anomaly_if_full == 0 & nonstrata$anomaly_md == 1 & nonstrata$anomaly_z == 0),])
+temp = rbind(temp, nonstrata[which(nonstrata$anomaly_if_full == 0 & nonstrata$anomaly_md == 0 & nonstrata$anomaly_z == 1),])
+temp$method = NA
+temp$method[which(temp$anomaly_if_full == 1)] = "Isolation Forest"
+temp$method[which(temp$anomaly_md == 1)] = "Mahalanobis"
+temp$method[which(temp$anomaly_z == 1)] = "Zscore"
+
+ggplot(temp, aes(log(LAND_ARE), log(SALE1), color = method)) + geom_point() + labs(title = paste0("Difference of Anomaly Detection (Non-Strata, Price VS Land size).", sep=""), x = "Land Size(log)", y = "Price(log)") + theme(plot.title = element_text(hjust = 0.5)) + scale_x_continuous(breaks = seq(0,20,5)) + coord_cartesian(xlim = c(3,11))
+```
+
+
+#the filter numbers
+```{r}
+n=0
+m=0
+a=0
+b=0
+c=0
+for (i in 1988:2020) {
+  temp = improved_data %>%
+    filter(year(improved_data$DATE1) == i)
+  a=a+nrow(temp)
+  temp = temp %>%
+    filter(temp$d_strata == 0)
+  b=b+nrow(temp)
+  print(nrow(temp))
+  print(length(which(temp$SALE1<=20)))
+  c=c+length(which(temp$SALE1<=20))
+  temp = temp %>%
+    filter(temp$SALE1 > 20)
+  m=m+length(which(temp$YEAR_BUI>i))
+  print(length(which(temp$YEAR_BUI>i)))
+  temp = temp %>%
+    filter(temp$YEAR_BUI <= i)
+  print(nrow(temp))
+  n=n+nrow(temp)
+}
+```
+
+
+```{r}
+for (i in c(1989, 1999, 2009, 2019)) {
+  #temp = improved_data[which(improved_data$d_strata == 0),]
+  #temp = temp %>%
+  #  filter(year(temp$DATE1) == i)
+  
+  temp = nonstrata %>%
+    filter(year(nonstrata$DATE1) == i)
+  
+  set.seed(717)
+  temp_list = createDataPartition(temp$X, p = 0.1)
+  temp_normal = temp[temp_list$Resample1,]
+
+  print(shapiro.test(log(temp_normal$SALE1)))
+  print(shapiro.test(log(temp_normal$LAND_ARE)))
+  print(ggqqplot(log(temp$SALE1)))
+  print(ggqqplot(log(temp$LAND_ARE)))
+}
+```

@@ -1,0 +1,39 @@
+\begin{table}[ht]
+\centering
+\caption{{\bf Summary statistics for house characteristics in the raw data, 2015 M1 - 2020 M12.} Summary statistics are for 174,137 observations in the data set. The price is deflated by the ABS RPPI, the reference period is the financial year 2011--2012. Age (years) is calculated as that year of sale substitutes year of build. Tile-Roof, Brick-Wall, tennis court and pool are dummies, 1 means the property use these building material or has these facilities.\setlength{\baselineskip}{1.25em}} 
+\label{tab_summary_stats_variables_cleaning_landgate_opinion}
+\setlength{\baselineskip}{1.25em}
+\resizebox{14cm}{8.6cm}{
+\begin{threeparttable}\small
+\begin{tabular}{lrrrrrrr}
+\toprule\toprule
+Variable                &No. of NA   &Mean   &S.D.    &Min    &Max\\
+\hline
+\multicolumn{3}{l}{No. of obs ($N = 174,137$)}\\ 
+$~~~~$Price (\$,000)      &0           &573.2  &416.0   &58.2   &20,534.9\\
+$~~~~$Land size ($m^2$)   &0           &927.5  &5,054.8 &1      &500,000\\
+$~~~~$latitude            &0           &-31.97 &0.167   &-32.46 &-31.46\\
+$~~~~$longitude           &0           &115.85 &0.096   &115.58 &116.35\\
+Essential characteristics\\
+$~~~~$Floor area ($m^2$)  &61,114      &155.2  &75.0    &1      &1,750\\
+$~~~~$Age (year)          &1,243       &27.5   &21.9    &0      &151\\
+$~~~~$Bedrooms            &1,139       &3.221  &0.854   &1      &9\\
+$~~~~$Bathrooms           &290         &1.645  &0.599   &1      &33\\
+$~~~~$Lounge              &1,139       &1.007  &0.086   &1      &11\\
+$~~~~$Kitchen             &1,139       &1.010  &0.105   &1      &7\\
+$~~~~$Tile-roof           &2,707       &0.798  &0.401   &0      &1\\
+$~~~~$Brick-wall          &169         &0.935  &0.247   &0      &1\\
+Living characteristics\\
+$~~~~$Dining              &0           &0.685  &0.468   &0      &5\\
+$~~~~$Family              &0           &0.594  &0.496   &0      &4\\
+$~~~~$Game                &0           &0.203  &0.407   &0      &11\\
+$~~~~$Meal                &0           &0.308  &0.464   &0      &11\\
+$~~~~$Study               &0           &0.197  &0.407   &0      &21\\
+$~~~~$Car parks           &0           &1.499  &0.770   &0      &12\\
+Add-on facilities\\
+$~~~~$Tennis court        &0           &0.001  &0.028   &0      &1\\
+$~~~~$Pool                &0           &0.169  &0.375   &0      &1\\
+\bottomrule\bottomrule
+\end{tabular}
+\end{threeparttable}}
+\end{table}

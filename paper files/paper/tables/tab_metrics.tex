@@ -1,0 +1,21 @@
+\begin{table}[ht]
+\centering
+\caption{{\bf The Evaluation Metrics.} shows the metrics used to assess the performance of models and approaches. All of the predictions are under log-scale. The percentage error range calculates the fraction of log-scaled prediction error ratios that fall outside of the interval $[-a, a]$. $\textbf{1}(\cdot)$ is the indicator function that takes the value one if the argument is satisfied and value zero otherwise.\setlength{\baselineskip}{1.25em}}
+\label{tab_metrics}
+\setlength{\baselineskip}{2em}
+\resizebox{14cm}{!}{
+\begin{threeparttable}
+\begin{tabular}{lll}
+\toprule\toprule
+Class            &Metrics Name            &Formula\\
+\hline
+Average Bias     &Mean Prediction Error   &$\frac{1}{n}\sum_{i=1}^{n}[ln(p_i)-ln(\hat{p}_i)]$\\
+Average Bias     &Median Prediction Error &$median[ln(p_i)-ln(\hat{p}_i)]$\\
+Absolute Ratio   &Mean Absolute Error     &$\frac{1}{n}\sum_{i=1}^{n}|ln(p_i)-ln(\hat{p}_i)|$\\
+Squared Ratio    &Root Mean Squared Error &$\sqrt{\frac{1}{n}\sum_{i=1}^{n}[ln(p_i)-ln(\hat{p}_i)]^2}$\\
+Percentage Ratio &Percentage Error Range  &$\frac{1}{n}\sum_{i=1}^{n} \textbf{1}(100|ln(p_i)-ln(\hat{p}_i)| \geq a)$\\
+\bottomrule\bottomrule
+\end{tabular}
+\end{threeparttable}}
+\end{table}
+

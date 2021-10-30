@@ -1,0 +1,48 @@
+\begin{table}[ht]
+\centering
+\caption{{\bf Summary statistics for house characteristics in the raw data, 2015 M1 - 2020 M12.} Summary statistics are for 174,137 observations in the data set. The price is deflated by the ABS RPPI, the reference period is the financial year 2011--2012. The numeric variables show the number of zero entries, the categorical variables (*) show the number of blank entries. To categorical variables, mode, the frequency of model and the number of categories are shown in this table.\setlength{\baselineskip}{1.25em}}
+\label{tab_summary_stats_variables_cleaning}
+\setlength{\baselineskip}{1.25em}
+\resizebox{14cm}{8.6cm}{
+\begin{threeparttable}\small
+\begin{tabular}{lrrrrrrr}
+\toprule\toprule
+Numeric variable &No. of `0' entries &Mean   &S.D.    &Min  &Max\\
+\midrule
+\multicolumn{3}{l}{No. of obs ($N = 174,137$)}\\ 
+$~~~~$Price (\$,000)      &0                  &573.2  &416.0   &58.2   &20,534.9\\
+$~~~~$Land size ($m^2$)   &0                  &927.5  &5,054.8 &1      &500,000\\
+$~~~~$Floor area ($m^2$)  &61,114             &100.8  &95.6    &0      &1,750\\
+$~~~~$Year of build       &1,243              &1975.7 &168.9   &0      &2020\\
+$~~~~$Latitude            &49,388             &-31.97 &0.185   &-32.46 &-31.46\\
+$~~~~$Longitude           &49,388             &115.86 &0.104   &115.58 &116.35\\
+%\midrule
+%Essential characteristics\\
+%\midrule
+$~~~~$Bedrooms            &1,139              &3.200  &0.890   &0      &9\\
+$~~~~$Bathrooms           &290                &1.642  &0.603   &0      &33\\
+$~~~~$Lounge              &1,139              &1.003  &0.132   &0      &11\\
+$~~~~$Kitchen             &1,139              &1.000  &0.118   &0      &7\\
+%\midrule
+%Living characteristics\\
+%\midrule
+$~~~~$Dining              &55,080             &0.685  &0.468   &0      &5\\
+$~~~~$Family              &71,147             &0.594  &0.496   &0      &4\\
+$~~~~$Game                &139,059            &0.203  &0.407   &0      &11\\
+$~~~~$Meal                &120,680            &0.308  &0.464   &0      &11\\
+$~~~~$Study               &140,347            &0.197  &0.407   &0      &21\\
+$~~~~$Car parks           &18,954             &1.499  &0.770   &0      &12\\
+%\midrule
+%Add-on facilities\\
+%\midrule
+$~~~~$Tennis court        &174,001            &0.001  &0.028   &0      &1\\
+\hline
+Categorical variable &No. of blanks     &Mode   &Mode Freq &\multicolumn{2}{r}{No. of category}\\
+\hline
+$~~~~$Roof (*)            &2,707              &Tile   &136,885   &\multicolumn{2}{r}{7}\\
+$~~~~$Wall (*)            &169                &Brick  &162,656   &\multicolumn{2}{r}{23}\\
+$~~~~$Pool (*)            &144,637            &B/G    &29,425    &\multicolumn{2}{r}{2}\\
+\bottomrule\bottomrule
+\end{tabular}
+\end{threeparttable}}
+\end{table}

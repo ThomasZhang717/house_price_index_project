@@ -1,0 +1,22 @@
+\begin{table}[ht]
+\centering
+\caption{{\bf Number of observations changes by the cleaning.} The data errors are observations those the year of sale is smaller than the year of build. The maximum and minimum prices boundaries of sold properties are for filtering non market transactions, source from Australian Property Monitors (APM). The overlaps happen, because observations could fall into several cleaning categories.\setlength{\baselineskip}{1.25em}}
+\label{tab_data_cleaning_process_landgate}
+\setlength{\baselineskip}{1.25em}
+\resizebox{14cm}{!}{
+\begin{threeparttable}
+\begin{tabular}{llrr}
+\toprule\toprule
+                                      &                                 &Number of records &Filtered records\\
+\midrule
+\textit{Landgate} data                &                                 &185,980\\
+		                              &Bundle sales                     &                  &$~$-3,676\\
+                                      &Duplicate records                &                  &$~$-3,251\\
+                                      &Data errors                      &                  &$~$-68\\
+                                      &Off-plan property sale                &                  &$~$-2,587\\
+                                      &APM transaction price boundaries &                  &$~$-3,638\\
+`Raw data'                            &                                 &174,137\\
+\bottomrule\bottomrule
+\end{tabular}
+\end{threeparttable}}
+\end{table}

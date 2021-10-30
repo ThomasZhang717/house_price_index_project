@@ -1,0 +1,37 @@
+\begin{table}[ht]
+\centering
+\caption{{\bf All pairwise comparisons of approaches in ten fold cross validation of the full arm-length data.} Each cell contains the number of wins, losses and ties between the approach in that row and the approach in that column.\setlength{\baselineskip}{1.25em}}
+\label{tab_summary_combinations_ten_fold}
+\setlength{\baselineskip}{1.25em}
+\resizebox{14cm}{!}{
+\begin{threeparttable}\small
+\begin{tabular}{lccccccccc}
+\toprule\toprule
+Approaches &$C2$  &$C3$  &$C4$   &$C5$   &$C6$   &$C7$   &$C8$   &$C9$   &$C10$\\
+\hline
+\multicolumn{10}{l}{MSE:}\\
+$C1$       &6-0-4 &0-1-9 &1-0-9  &10-0-0 &10-0-0 &10-0-0 &10-0-0 &2-0-8  &6-0-4\\
+$C2$       &      &0-7-3 &0-3-7  &10-0-0 &10-0-0 &10-0-0 &10-0-0 &0-1-9  &0-1-9\\
+$C3$       &      &      &2-0-8  &10-0-0 &10-0-0 &10-0-0 &10-0-0 &5-0-5  &6-0-4\\
+$C4$       &      &      &       &10-0-0 &10-0-0 &10-0-0 &10-0-0 &0-1-9  &2-0-8\\
+$C5$       &      &      &       &       &6-0-4  &0-10-0 &0-10-0 &0-10-0 &0-10-0\\
+$C6$       &      &      &       &       &       &0-10-0 &0-10-0 &0-10-0 &0-10-0\\
+$C7$       &      &      &       &       &       &       &7-0-3  &0-10-0 &0-10-0\\
+$C8$       &      &      &       &       &       &       &       &0-10-0 &0-10-0\\
+$C9$       &      &      &       &       &       &       &       &       &3-0-7\\
+\hline
+\multicolumn{10}{l}{MAE:}\\
+$C1$       &6-0-4 &0-1-9 &0-0-10 &10-0-0 &10-0-0 &10-0-0 &10-0-0 &0-1-9  &0-1-9\\
+$C2$       &      &0-9-1 &0-9-1  &10-0-0 &10-0-0 &10-0-0 &10-0-0 &0-7-3  &0-6-4\\
+$C3$       &      &      &1-0-9  &10-0-0 &10-0-0 &10-0-0 &10-0-0 &0-1-9  &0-1-9\\
+$C4$       &      &      &       &10-0-0 &10-0-0 &10-0-0 &10-0-0 &0-1-9  &0-1-9\\
+$C5$       &      &      &       &       &2-0-8  &0-10-0 &0-10-0 &0-10-0 &0-10-0\\
+$C6$       &      &      &       &       &       &0-10-0 &0-10-0 &0-10-0 &0-10-0\\
+$C7$       &      &      &       &       &       &       &10-0-0 &0-10-0 &0-10-0\\
+$C8$       &      &      &       &       &       &       &       &0-10-0 &0-10-0\\
+$C9$       &      &      &       &       &       &       &       &       &0-0-10\\
+\bottomrule\bottomrule
+\end{tabular}
+Note: Testing fold prediction errors are compared in 10 experiments. If errors from two approaches are statistically different, the approach having lower error is better. Otherwise, the match is a draw. Significant level is 0.05 in error tests.\setlength{\baselineskip}{1.25em}
+\end{threeparttable}}
+\end{table}

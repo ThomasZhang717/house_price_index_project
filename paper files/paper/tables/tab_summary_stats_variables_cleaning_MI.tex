@@ -1,0 +1,36 @@
+\begin{table}[ht]
+\centering
+\caption{{\bf Summary statistics for house characteristics in the MI data, 2015 M1 - 2020 M12.} Summary statistics are for the 174,973 observations in the data set. The price is deflated by the ABS RPPI, the reference period is the financial year 2011--2012. Age (years) is measured at the year of transaction. The $1$ of Tile means that the roof material uses tiles, $0$ means the others. The $1$ of Brick means that the building material of wall uses bricks, $0$ means the others. The difference between five imputed data sets are shown in the brackets.\setlength{\baselineskip}{1.25em}}
+\label{tab_summary_stats_variables_cleaning_MI}
+\setlength{\baselineskip}{1.5em}
+\begin{threeparttable}\small
+\begin{tabular}{lrrrr}
+\toprule\toprule
+Variable           &Mean                &S.D.                 &Min  &Max\\
+\midrule
+\multicolumn{3}{l}{No. of obs ($N = 174,973$)}\\ 
+Price (\$,000)     &572.7               &417.0                &58.1 &20,534.9\\
+Land Size ($m^2$)  &903.2               &4,770.9              &1    &560,471\\
+Floor Area ($m^2$) &154.8 ($\pm 0.2$)   &69.5 ($\pm 0.2$)     &1    &1,750\\
+Age (years)        &27.3 ($\pm 0.01$)   &21.9 ($\pm 0.04$)    &0    &151\\
+Bedrooms           &3.196 ($\pm 0.001$) &0.864 ($\pm 0.001$)  &1    &9\\
+Bathrooms          &1.640 ($\pm 0.001$) &0.597 ($\pm 0.001$)  &1    &33\\
+Dining             &1.001 ($\pm 0.001$) &0.041 ($\pm 0.002$)  &1    &5\\
+Car Pars           &1.640 ($\pm 0.001$) &0.602 ($\pm 0.001$)  &1    &12\\
+Kitchen            &1.004 (*)           &0.070 (*)            &1    &7\\
+Family             &1.003 ($\pm 0.001$) &0.060 ($\pm 0.005$)  &1    &4\\
+Game               &1.013 ($\pm 0.005$) &0.120 ($\pm 0.02$)   &1    &11\\
+Meal               &1.001 ($\pm 0.001$) &0.055 ($\pm 0.015$)  &1    &11\\
+Lounge             &1.008 (*)           &0.095 (*)            &1    &11\\
+Study              &1.015 ($\pm 0.006$) &0.210 ($\pm 0.07$)   &1    &21\\
+\midrule
+                   &0       &1\\
+\midrule
+Tile               &38,819  &136,154\\
+Brick              &13,476  &161,479\\
+Pool               &145,676 &29,297\\
+\bottomrule\bottomrule
+\end{tabular}
+Note: (*) means the difference between five imputation data sets are negligible.\setlength{\baselineskip}{1.25em}
+\end{threeparttable}
+\end{table}

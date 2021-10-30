@@ -1,0 +1,25 @@
+\subsection{Market and data}
+
+Perth is the capital and largest city of Western Australia, one of the five biggest city in Australia. There are around 2.1 million residents living in Great Perth area in 2020, the last year in our sample period from 2003M7 to 2020M12. Around $24,000$--$34,000$ properties are sold in metropolitan area each year, mostly houses (66.1\%), followed by group houses (12.7\%) and the rest types\footnote{The detailed property classes are shown in Appendix.}.
+
+\noindent The transaction data set is provided by the \textit{Western Australian Land Information Authority}, that operates under the business name of \textit{Landgate}. The \textit{Landgate} data contain all transaction records in Great Perth metropolitan area (excluding Mandurah) including vacant parcels and buildings. Each record documents information about sales price and date, parcel details, property type, number of bedrooms, bathrooms and a range of other building features. The parcel details include the identity information of each property, such as the parcel ID, Unique polygon ID number (PIN), land ID and application number of transaction registration. These IDs are helpful to search and distinguish the transactions of each property. The coordinates are available in a separate cadastral file, linked to each property by PIN. From 2015 to 2020, there are 21,231 new established property sold\footnote{This number includes the buildings which are built after 2014.}. The rest are old properties those had been sold at least once before 2015 or those are listed on market for the first time.
+
+\subsection{Data preparation}
+
+The \textit{Landgate} data contains 185,980 transactions of residential properties from 2015 to 2020. Firstly, we exclude bundle sales, duplicate records, data errors and off-plan property sales, as they are not relevant and the removal does not obtain bias on the overall sample \citep{krause_lipscomb16}. In addition, non-market transaction records in \textit{Landgate} data are eliminated. The yearly minimum and maximum prices of sold properties in Perth local housing market are set as boundaries of transaction prices from 2015 to 2020. The source of this information is \textit{Australian Urban Research Infrastructure Network} (AURIN), the data provider is \textit{Australian Property Monitors} (APM). Finally, there are 174,137 observations rest in our data set, 11,843 observations (6.3\%) filtered in total. Hereinafter this data set is referred to as the `raw data'. The eliminating process is summarized in \autoref{tab_data_cleaning_process_landgate}. 
+
+%
+\begin{quote}
+\centering
+[\autoref{tab_data_cleaning_process_landgate} about here.]
+\end{quote}
+%
+
+\noindent The summary of variables in the prepared `raw data' are presented in \autoref{tab_summary_stats_variables_cleaning_landgate_opinion}\footnote{The details about missing values and outliers are shown in appendix.}. Clearly, we face two problems when the `raw data' are used to estimate the prices of residential properties. First one is the missing values shown in the essential characteristics. Most of essential characteristics show low level of missing values, the rates are higher than 0.09\% but lower than 1.6\%. The missing rate of floor area, however, is around 35\%, that is much heavier than the others. The second is outlying observations in the `raw data'. There are some unusual values in the Max column of \autoref{tab_summary_stats_variables_cleaning_landgate_opinion}, such as 33 bedrooms and 21 study rooms. Missing values and outliers should be dealt, because they may affect the process and accuracy of estimation. 
+
+%
+\begin{quote}
+\centering
+[\autoref{tab_summary_stats_variables_cleaning_landgate_opinion} about here.]
+\end{quote}
+%
