@@ -26,5 +26,5 @@ bin-release/
 # Other files
 *.drawio
 
-# paper files folder
+# ignore folders
 /paper_files/
