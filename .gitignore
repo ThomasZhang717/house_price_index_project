@@ -26,12 +26,12 @@ bin-release/
 # Other files
 *.drawio
 
-# Tex generated files
-./paper files/paper/*.aux
-./paper files/paper/*.log
-./paper files/paper/*.out
-./paper files/paper/*.synctex.ga
-./paper files/paper/*.toc
-./paper files/paper/*.nav
-./paper files/paper/*.snm
-./paper files/paper/*.bak
+# Tex files
+./paper_files/*.*
+./paper_files/*.*
+./paper_files/*.*
+./paper_files/*.*
+./paper_files/*.*
+./paper_files/*.*
+./paper_files/*.*
+./paper_files/*.*
