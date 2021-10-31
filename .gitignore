@@ -23,6 +23,7 @@ bin-release/
 *.csv
 *.zip
 *.sav
+*.Rhistory
 
 # Other files
 *.drawio
