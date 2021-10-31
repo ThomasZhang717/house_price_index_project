@@ -1,0 +1,470 @@
+---
+title: "step_one_landgate_raw_data"
+author: "Zhuoran"
+date: "10/31/2021"
+output: html_document
+---
+
+```{r}
+library(foreign)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(tidygeocoder)
+library(lubridate)
+library(ggmap)
+```
+
+
+#read data  #249,571 obs from 2015
+```{r}
+#read data
+full = data.frame(read.spss("./data/ThomasZhangDataPerthMetro_Dec2020.sav"))
+
+#date format
+full$year_sale = year(ymd(full$DATE1))
+
+#picked data after 2015
+full_data = full %>%
+  filter(full$year_sale > 2003)
+
+#change format of PIN
+full_data$PIN = as.numeric(full_data$PIN)
+```
+
+
+#picked property classes (*): 185,980
+```{r}
+#pick * classes
+full_data$d_residential = 0
+full_data$d_residential[which(full_data$PROP_CLA == "HOUSE       ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOUSES      ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "APARTMENT HO")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "FLAT        ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "FLATS       ")] = 1
+full_data$d_residential[which(str_detect(full_data$PROP_CLA, "PLEX"))] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "TOWN HOUSE  ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "TOWN HOUSES ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "GROUP HOUSE ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "GROUP HOUSES")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "VILLA HOUSE ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "VILLA HOUSES")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOME UNIT   ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOME UNITS  ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "TERRACE HOUS")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOUSE - GRAN")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "RETIREMWNT V")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "SEMI-DETACHE")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "PATIO HOUSE ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOUSE - LAND")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOUSE - FLAT")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "DETACHED HOU")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOUSE - UNIT")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "ROW HOUSE   ")] = 1
+full_data$d_residential[which(full_data$PROP_CLA == "HOLIDAY UNIT")] = 1
+
+
+#pick group first
+full_data = full_data %>%
+  filter(full_data$d_residential == 1)
+```
+
+
+#identify off-property sale
+```{r}
+full_data$no_building = 0
+
+full_data$no_building[which(full_data$WALL != "      ")] = full_data$no_building[which(full_data$WALL != "      ")] + 1
+full_data$no_building[which(full_data$ROOF != "      ")] = full_data$no_building[which(full_data$ROOF != "      ")] + 1
+full_data$no_building[which(full_data$AREA_HSE != 0)] = full_data$no_building[which(full_data$AREA_HSE != 0)] + 1
+full_data$no_building[which(full_data$YEAR_BUI != 0)] = full_data$no_building[which(full_data$YEAR_BUI != 0)] + 1
+full_data$no_building[which(full_data$BEDS != 0)] = full_data$no_building[which(full_data$BEDS != 0)] + 1
+full_data$no_building[which(full_data$BATHS != 0)] = full_data$no_building[which(full_data$BATHS != 0)] + 1
+full_data$no_building[which(full_data$DINING != 0)] = full_data$no_building[which(full_data$DINING != 0)] + 1
+full_data$no_building[which(full_data$KITCHEN != 0)] = full_data$no_building[which(full_data$KITCHEN != 0)] + 1
+full_data$no_building[which(full_data$FAMILY != 0)] = full_data$no_building[which(full_data$FAMILY != 0)] + 1
+full_data$no_building[which(full_data$GAMES != 0)] = full_data$no_building[which(full_data$GAMES != 0)] + 1
+full_data$no_building[which(full_data$MEALS != 0)] = full_data$no_building[which(full_data$MEALS != 0)] + 1
+full_data$no_building[which(full_data$LOUNGE != 0)] = full_data$no_building[which(full_data$LOUNGE != 0)] + 1
+full_data$no_building[which(full_data$STUDY != 0)] = full_data$no_building[which(full_data$STUDY != 0)] + 1
+```
+
+
+#identify the bundle sale
+```{r}
+full_data$d_bundle = 0
+
+#multi == 1 and multi units in one sale
+full_data$d_bundle[which(full_data$MULTI1 == 1)] = 1
+full_data$d_bundle[which(full_data$NO_OF_UN > 1)] = 1
+```
+
+
+#data errors
+```{r}
+full_data$d_dataerror = 0
+
+#year sale less than year build
+full_data$d_dataerror[which(full_data$year_sale < full_data$YEAR_BUI)] = 1
+```
+
+
+#duplicates
+```{r}
+#find by property ID, order Parcel id, then find duplicates
+temp_duplicates = full_data[order(full_data$PARCEL_I, full_data$SALE1, full_data$PIN, full_data$APP1, full_data$LAND_ID, full_data$DATE1),]
+temp_duplicates$d_find = 0
+for (i in 1:(nrow(full_data)-1)) {
+  if(temp_duplicates$PARCEL_I[i] == temp_duplicates$PARCEL_I[i+1]){
+    if(!is.na(temp_duplicates$PIN[i]) & !is.na(temp_duplicates$PIN[i+1])){
+      if(temp_duplicates$PIN[i] == temp_duplicates$PIN[i+1] & temp_duplicates$APP1[i] == temp_duplicates$APP1[i+1] & temp_duplicates$LAND_ID[i] == temp_duplicates$LAND_ID[i+1] & temp_duplicates$SALE1[i] == temp_duplicates$SALE1[i+1] & temp_duplicates$DATE1[i] == temp_duplicates$DATE1[i+1]){
+      temp_duplicates$d_find[i] = 1
+      temp_duplicates$d_find[i+1] = 1
+      }
+    }
+    else{
+      if(temp_duplicates$APP1[i] == temp_duplicates$APP1[i+1] & temp_duplicates$LAND_ID[i] == temp_duplicates$LAND_ID[i+1] & temp_duplicates$SALE1[i] == temp_duplicates$SALE1[i+1] & temp_duplicates$DATE1[i] == temp_duplicates$DATE1[i+1]){
+      temp_duplicates$d_find[i] = 1
+      temp_duplicates$d_find[i+1] = 1
+      }
+    }
+  }
+  print(i)
+}
+
+full_data$d_duplicate_pid[order(full_data$PARCEL_I, full_data$SALE1, full_data$PIN, full_data$APP1, full_data$LAND_ID, full_data$DATE1)] = temp_duplicates$d_find
+
+
+#find by transaction id, order APP1, find duplicates. this is to check whether some duplicates are not identified 
+temp_duplicates = full_data[order(full_data$APP1, full_data$PARCEL_I, full_data$SALE1, full_data$PIN, full_data$LAND_ID, full_data$DATE1),]
+temp_duplicates$d_find = 0
+for (i in 1:(nrow(full_data)-1)) {
+  if(temp_duplicates$APP1[i] == temp_duplicates$APP1[i+1]){
+    if(!is.na(temp_duplicates$PIN[i]) & !is.na(temp_duplicates$PIN[i+1])){
+      if(temp_duplicates$PIN[i] == temp_duplicates$PIN[i+1] & temp_duplicates$PARCEL_I[i] == temp_duplicates$PARCEL_I[i+1] & temp_duplicates$LAND_ID[i] == temp_duplicates$LAND_ID[i+1] & temp_duplicates$SALE1[i] == temp_duplicates$SALE1[i+1] & temp_duplicates$DATE1[i] == temp_duplicates$DATE1[i+1]){
+      temp_duplicates$d_find[i] = 1
+      temp_duplicates$d_find[i+1] = 1
+      }
+    }
+    else{
+      if(temp_duplicates$PARCEL_I[i] == temp_duplicates$PARCEL_I[i+1] & temp_duplicates$LAND_ID[i] == temp_duplicates$LAND_ID[i+1] & temp_duplicates$SALE1[i] == temp_duplicates$SALE1[i+1] & temp_duplicates$DATE1[i] == temp_duplicates$DATE1[i+1]){
+      temp_duplicates$d_find[i] = 1
+      temp_duplicates$d_find[i+1] = 1
+      }
+    }
+  }
+  print(i)
+}
+
+full_data$d_duplicate_tid[order(full_data$APP1, full_data$PARCEL_I, full_data$SALE1, full_data$PIN, full_data$LAND_ID, full_data$DATE1)] = temp_duplicates$d_find
+```
+
+
+#apm boundaries
+```{r}
+#combine some classes
+full_data$PROP_CLA[which(full_data$PROP_CLA == "HOUSES      ")] = "HOUSE       "
+full_data$PROP_CLA[which(full_data$PROP_CLA == "FLATS       ")] = "FLAT        "
+full_data$PROP_CLA[which(str_detect(full_data$PROP_CLA, "DUPLEX"))] = "DUPLEX      "
+full_data$PROP_CLA[which(str_detect(full_data$PROP_CLA, "TRIPLEX"))] = "TRIPLEX     "
+full_data$PROP_CLA[which(str_detect(full_data$PROP_CLA, "QUADRUPLEX"))] = "QUADRUPLEX  "
+full_data$PROP_CLA[which(full_data$PROP_CLA == "TOWN HOUSES ")] = "TOWN HOUSE  "
+full_data$PROP_CLA[which(full_data$PROP_CLA == "GROUP HOUSES")] = "GROUP HOUSE "
+full_data$PROP_CLA[which(full_data$PROP_CLA == "VILLA HOUSES")] = "VILLA HOUSE "
+full_data$PROP_CLA[which(full_data$PROP_CLA == "HOME UNITS  ")] = "HOME UNIT   "
+
+#define strata and non-strata
+full_data$d_strata = 0
+full_data$d_strata[which(str_detect(full_data$LAND_ID, "S"))] = 1
+
+#define five sub area, northeast, northwest, southeast, southwest, inner-perth
+full_data$d_armlength = 0
+full_data$submarket = ""
+full_data$submarket[which(full_data$LA_DESC == "SWAN                     " | full_data$LA_DESC == "MUNDARING                " | full_data$LA_DESC == "BAYSWATER                " | full_data$LA_DESC == "BASSENDEAN               ")] = "northeast"
+
+full_data$submarket[which(full_data$LA_DESC == "STIRLING                 " | full_data$LA_DESC == "JOONDALUP                " | full_data$LA_DESC == "WANNEROO                 ")] = "northwest"
+
+full_data$submarket[which(full_data$LA_DESC == "SOUTH PERTH              " | full_data$LA_DESC == "VICTORIA PARK            " | full_data$LA_DESC == "BELMONT                  " | full_data$LA_DESC == "KALAMUNDA                " | full_data$LA_DESC == "ARMADALE                 " | full_data$LA_DESC == "GOSNELLS                 " | full_data$LA_DESC == "SERPENTINE-JARRAHDALE    " | full_data$LA_DESC == "CANNING                  ")] = "southeast"
+
+full_data$submarket[which(full_data$LA_DESC == "ROCKINGHAM               " | full_data$LA_DESC == "KWINANA                  " | full_data$LA_DESC == "COCKBURN                 " | full_data$LA_DESC == "FREMANTLE                " | full_data$LA_DESC == "EAST FREMANTLE           " | full_data$LA_DESC == "MELVILLE                 ")] = "southwest"
+
+full_data$submarket[which(full_data$LA_DESC == "VINCENT                  " | full_data$LA_DESC == "SUBIACO                  " | full_data$LA_DESC == "NEDLANDS                 " | full_data$LA_DESC == "MOSMAN PARK              " | full_data$LA_DESC == "PEPPERMINT GROVE         " | full_data$LA_DESC == "CAMBRIDGE                " | full_data$LA_DESC == "CLAREMONT                " | full_data$LA_DESC == "COTTESLOE                ")] = "inner"
+
+
+#non-strata arm-length transaction, within boundaries yearly in each area
+#2015
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 117600 & full_data$SALE1 <= 7416876 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 117000 & full_data$SALE1 <= 9620000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 116100 & full_data$SALE1 <= 5775000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 120000 & full_data$SALE1 <= 6800000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 137500 & full_data$SALE1 <= 12250000 & full_data$d_residential == 1] = 1
+
+#2016
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 53500 & full_data$SALE1 <= 2788000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 126000 & full_data$SALE1 <= 8000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 125000 & full_data$SALE1 <= 6050000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 130000 & full_data$SALE1 <= 6300000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 125000 & full_data$SALE1 <= 14130000 & full_data$d_residential == 1] = 1
+
+#2017
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 135000 & full_data$SALE1 <= 2550000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 140000 & full_data$SALE1 <= 4303750 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 143000 & full_data$SALE1 <= 7250000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 140000 & full_data$SALE1 <= 10500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 162000 & full_data$SALE1 <= 25100000 & full_data$d_residential == 1] = 1
+
+#2018
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 5100000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 90000 & full_data$SALE1 <= 4650000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 145000 & full_data$SALE1 <= 4100000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 145000 & full_data$SALE1 <= 10500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 8375000 & full_data$d_residential == 1] = 1
+
+#2019
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 160000 & full_data$SALE1 <= 5150000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 160000 & full_data$SALE1 <= 4050000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 157000 & full_data$SALE1 <= 9897849 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 158000 & full_data$SALE1 <= 11000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 171000 & full_data$SALE1 <= 8500000 & full_data$d_residential == 1] = 1
+
+#2020
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 170000 & full_data$SALE1 <= 4660000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 115000 & full_data$SALE1 <= 4650000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 170000 & full_data$SALE1 <= 7500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 169000 & full_data$SALE1 <= 4650000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 170000 & full_data$SALE1 <= 27500000 & full_data$d_residential == 1] = 1
+
+
+#strata arm-length transaction, within boundaries yearly in each area
+#2015
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 870000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 120000 & full_data$SALE1 <= 1450000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 130000 & full_data$SALE1 <= 1400000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 3775000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 151000 & full_data$SALE1 <= 5500000 & full_data$d_residential == 1] = 1
+
+#2016
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 156000 & full_data$SALE1 <= 825000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 125000 & full_data$SALE1 <= 1550000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 125000 & full_data$SALE1 <= 5800000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 125000 & full_data$SALE1 <= 2800000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2016 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 130842 & full_data$SALE1 <= 2200000 & full_data$d_residential == 1] = 1
+
+#2017
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 141000 & full_data$SALE1 <= 765000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 137000 & full_data$SALE1 <= 1265000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 1730000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 135000 & full_data$SALE1 <= 1830000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2017 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 1825000 & full_data$d_residential == 1] = 1
+
+#2018
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 145000 & full_data$SALE1 <= 699000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 2654000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 4250000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 100000 & full_data$SALE1 <= 2000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2018 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 3450000 & full_data$d_residential == 1] = 1
+
+#2019
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 163000 & full_data$SALE1 <= 1660000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 161000 & full_data$SALE1 <= 1180000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 2000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 162000 & full_data$SALE1 <= 1910000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2019 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 158500 & full_data$SALE1 <= 3100000 & full_data$d_residential == 1] = 1
+
+#2020
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 170000 & full_data$SALE1 <= 650000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 169000 & full_data$SALE1 <= 1350000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 130000 & full_data$SALE1 <= 4400000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 130000 & full_data$SALE1 <= 2350000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 169000 & full_data$SALE1 <= 2300000 & full_data$d_residential == 1] = 1
+```
+
+
+
+#pick duplicates out and see details
+```{r}
+#find duplicates, if one method define transactions are duplicates
+duplicates = full_data[which(full_data$d_duplicate_pid == 1 | full_data$d_duplicate_tid == 1),]
+
+#all duplicates and must have building information
+temp = duplicates[order(duplicates$APP1, -duplicates$no_building),]
+
+#keep useful duplciate transaction
+temp_duplicates = temp %>%
+  distinct(PARCEL_I, PIN, LAND_ID, SALE1, DATE1, APP1, .keep_all = TRUE)
+
+
+#check frequency of duplicates
+#duplicates_fre = data.frame(table(duplicates$APP1))
+#duplicates_delete_fre = data.frame(table(temp_duplicates$APP1))
+#duplicates_fre$Freq1 = duplicates_delete_fre$Freq
+#length(which(duplicates_fre$Freq == 3 & duplicates_fre$Freq1 == 1))
+#length(which(duplicates_fre$Freq == 2 & duplicates_fre$Freq1 == 1))
+#length(which(duplicates_fre$Freq == 4 & duplicates_fre$Freq1 == 2))
+#length(which(duplicates_fre$Freq == 6 & duplicates_fre$Freq1 == 3))
+#length(which(duplicates_fre$Freq == 32 & duplicates_fre$Freq1 == 16))
+#compare the frequency
+#pick group first
+#2:3033 + 2*13 + 3*2 + 16 = 3081
+#3:85
+```
+
+
+#clean all and add clean duplicates back
+```{r}
+#define cleaned non-duplicate transactions
+full_data_merge = full_data[which(full_data$d_armlength == 1 & full_data$d_dataerror == 0 & full_data$d_duplicate_pid == 0 & full_data$d_duplicate_tid == 0 & full_data$d_residential == 1 & full_data$d_bundle == 0 & full_data$no_building > 0),]
+
+#define cleaned duplicates (only useful one kept)
+duplicates_clean = temp_duplicates[which(temp_duplicates$d_armlength == 1 & temp_duplicates$d_dataerror == 0 & temp_duplicates$d_residential == 1 & temp_duplicates$d_bundle == 0 & temp_duplicates$no_building > 0),]
+
+#union this two, the final transaction set
+full_data_merge = union(full_data_merge, duplicates_clean)
+```
+
+
+#quater numbers and flat sale price by residential property index
+```{r}
+#quarter numbers
+full_data_merge$quarter = quarter(ymd(full_data_merge$DATE1))
+
+full_data_merge$quarter_num = (full_data_merge$year_sale - 2015)*4 + full_data_merge$quarter
+
+#import index file
+abs_index = read.csv(file = "./abs_index.csv")
+
+#flat sale price to 2011-2012 financial year
+full_data_merge$sale_flat = NA
+#flat by price index
+for (i in 1:24) {
+  full_data_merge$sale_flat[which(full_data_merge$quarter_num == i)] = full_data_merge$SALE1[which(full_data_merge$quarter_num == i)]/abs_index$index_num[i] * 100
+}
+```
+
+
+#tile-roof, brick-wall, pool and car
+```{r}
+#tile roof dummy
+full_data_merge$d_tile = 0
+
+full_data_merge$d_tile[which(full_data_merge$ROOF == "TILE  ")] = 1
+full_data_merge$d_tile[which(full_data_merge$ROOF == "      ")] = NA
+
+#brick wall dummy
+full_data_merge$d_brick = 0
+
+full_data_merge$d_brick[which(full_data_merge$WALL == "BRICK ")] = 1
+full_data_merge$d_brick[which(full_data_merge$WALL == "      ")] = NA
+
+#pool dummy
+full_data_merge$d_pool = 0
+
+full_data_merge$d_pool[which(full_data_merge$POOL == "B/G  ")] = 1
+full_data_merge$d_pool[which(full_data_merge$POOL == "A/G  ")] = 1
+
+#carparks
+full_data_merge$carpark = full_data_merge$CARPRT_A + full_data_merge$CARPRT_D + full_data_merge$CARPRT_U + full_data_merge$GARAGE_A + full_data_merge$GARAGE_D + full_data_merge$GARAGE_U
+```
+
+
+#import spatial data
+```{r}
+spatial_data = read.dbf("./Transaction data/Cadastre_Polygon_Current.dbf")
+```
+
+
+#matching data if they have the same PIN
+```{r}
+colnames(spatial_data)[1] = "PIN"
+
+#this one is better
+full_data_merge =  merge(full_data_merge, spatial_data, by = "PIN", all.x = TRUE)
+
+#clean duplicates due to merge, coordinates of duplicates are same
+full_data_merge = full_data_merge %>%
+  distinct(PARCEL_I, PIN, LAND_ID, SALE1, DATE1, APP1, .keep_all = TRUE)
+```
+
+
+#fill the geocode if coordinates are not available
+```{r}
+#open source geocode api
+coords_na = which(is.na(full_data_merge$centlat))
+full_data_merge$address = paste0(full_data_merge$ST_NO, full_data_merge$ST_NAME, full_data_merge$ST_SUFX, ",", full_data_merge$SUBURB, ", WA", sep = "")
+
+for (i in coords_na) {
+  temp = geo(full_data_merge$address[i])
+  full_data_merge$centlat[i] = temp$lat
+  full_data_merge$centlong[i] = temp$long
+  print(i)
+}
+
+#google geocode api
+#httr::set_config(httr::use_proxy(url = "http://127.0.0.1", port = 7890), override = TRUE)
+#register_google(key = "AIzaSyADUkXIZR8qPPFdcHHVfvWHAUzw8N0YSUk")
+#coords_na = which(is.na(full_data_merge$centlat))
+#for (i in coords_na) {
+#  temp = geocode(full_data_merge$address[i], output = "latlona")
+#  full_data_merge$centlat[i] = temp$lat
+#  full_data_merge$centlong[i] = temp$lon
+#  print(i)
+#}
+```
+
+
+#correct land area if geo data available
+```{r}
+#if the difference between transaction record and geo-info record are huge
+full_data_merge$LAND_ARE[which(full_data_merge$legal_area/full_data_merge$LAND_ARE > 8 | full_data_merge$legal_area/full_data_merge$LAND_ARE < 0.125)] = full_data_merge$legal_area[which(full_data_merge$legal_area/full_data_merge$LAND_ARE > 8 | full_data_merge$legal_area/full_data_merge$LAND_ARE < 0.125)]
+```
+
+
+#set essentials zero to NA (brick and tile done previously)
+```{r}
+full_data_merge$AREA_HSE[which(full_data_merge$AREA_HSE == 0)] = NA
+full_data_merge$YEAR_BUI[which(full_data_merge$YEAR_BUI == 0)] = NA
+full_data_merge$BEDS[which(full_data_merge$BEDS == 0)] = NA
+full_data_merge$BATHS[which(full_data_merge$BATHS == 0)] = NA
+full_data_merge$KITCHEN[which(full_data_merge$KITCHEN == 0)] = NA
+full_data_merge$LOUNGE[which(full_data_merge$LOUNGE == 0)] = NA
+full_data_merge$age = full_data_merge$year_sale - full_data_merge$YEAR_BUI
+```
+
+
+#standardize land and house size for isolation forest
+```{r}
+#standardize land area for isoforest
+full_data_merge = full_data_merge %>%
+  group_by(PROP_CLA) %>%
+  mutate(land_z = scale(log(LAND_ARE)))
+
+#standardize house size for isoforest
+full_data_merge = full_data_merge %>%
+  group_by(PROP_CLA) %>%
+  mutate(house_size_z = scale(log(AREA_HSE)))
+```
+
+
+#save the data file for next steps
+```{r}
+write.csv(full_data_merge, "./cleaned_data_2015_2020_paperversion_geocomplete_0tomiss.csv")
+```
+
+
+
+#read past geocoded data
+```{r}
+geocode_2015 = read.csv("./cleaned_data_2015_2020_paperversion_geocomplete.csv")[-1]
+
+#match the geocodes
+coords_na = which(is.na(full_data_merge$centlat))
+full_data_merge$address = paste0(full_data_merge$ST_NO, full_data_merge$ST_NAME, full_data_merge$ST_SUFX, ",", full_data_merge$SUBURB, ", WA", sep = "")
+
+for (i in coords_na) {
+  
+  full_data_merge$centlat[i] = geocode_2015$centlat[which(geocode_2015$address == full_data_merge$address[i])[1]]
+  full_data_merge$centlong[i] = geocode_2015$centlong[which(geocode_2015$address == full_data_merge$address[i])[1]]
+  print(i)
+}
+#1 school st, kalamunda -31.9698041;116.0574984
+```
