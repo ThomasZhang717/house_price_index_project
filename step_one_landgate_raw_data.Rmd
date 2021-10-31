@@ -16,7 +16,7 @@ library(ggmap)
 ```
 
 
-#read data  #249,571 obs from 2015
+#read data  #836,663 obs from 2015
 ```{r}
 #read data
 full = data.frame(read.spss("./data/ThomasZhangDataPerthMetro_Dec2020.sav"))
@@ -33,7 +33,7 @@ full_data$PIN = as.numeric(full_data$PIN)
 ```
 
 
-#picked property classes (*): 185,980
+#picked property classes (*): 621,981
 ```{r}
 #pick * classes
 full_data$d_residential = 0
@@ -292,21 +292,6 @@ temp = duplicates[order(duplicates$APP1, -duplicates$no_building),]
 #keep useful duplciate transaction
 temp_duplicates = temp %>%
   distinct(PARCEL_I, PIN, LAND_ID, SALE1, DATE1, APP1, .keep_all = TRUE)
-
-
-#check frequency of duplicates
-#duplicates_fre = data.frame(table(duplicates$APP1))
-#duplicates_delete_fre = data.frame(table(temp_duplicates$APP1))
-#duplicates_fre$Freq1 = duplicates_delete_fre$Freq
-#length(which(duplicates_fre$Freq == 3 & duplicates_fre$Freq1 == 1))
-#length(which(duplicates_fre$Freq == 2 & duplicates_fre$Freq1 == 1))
-#length(which(duplicates_fre$Freq == 4 & duplicates_fre$Freq1 == 2))
-#length(which(duplicates_fre$Freq == 6 & duplicates_fre$Freq1 == 3))
-#length(which(duplicates_fre$Freq == 32 & duplicates_fre$Freq1 == 16))
-#compare the frequency
-#pick group first
-#2:3033 + 2*13 + 3*2 + 16 = 3081
-#3:85
 ```
 
 
@@ -328,7 +313,7 @@ full_data_merge = union(full_data_merge, duplicates_clean)
 #quarter numbers
 full_data_merge$quarter = quarter(ymd(full_data_merge$DATE1))
 
-full_data_merge$quarter_num = (full_data_merge$year_sale - 2015)*4 + full_data_merge$quarter
+full_data_merge$quarter_num = (full_data_merge$year_sale - 2003)*4 + full_data_merge$quarter
 
 #import index file
 abs_index = read.csv(file = "./abs_index.csv")
