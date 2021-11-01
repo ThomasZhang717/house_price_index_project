@@ -386,7 +386,7 @@ for (i in coords_na) {
 
 #google geocode api
 #httr::set_config(httr::use_proxy(url = "http://127.0.0.1", port = 7890), override = TRUE)
-#register_google(key = "AIzaSyADUkXIZR8qPPFdcHHVfvWHAUzw8N0YSUk")
+#register_google(key = "need to reapply a google map API")
 #coords_na = which(is.na(full_data_merge$centlat))
 #for (i in coords_na) {
 #  temp = geocode(full_data_merge$address[i], output = "latlona")
