@@ -188,10 +188,87 @@ full_data$submarket[which(full_data$LA_DESC == "SOUTH PERTH              " | ful
 
 full_data$submarket[which(full_data$LA_DESC == "ROCKINGHAM               " | full_data$LA_DESC == "KWINANA                  " | full_data$LA_DESC == "COCKBURN                 " | full_data$LA_DESC == "FREMANTLE                " | full_data$LA_DESC == "EAST FREMANTLE           " | full_data$LA_DESC == "MELVILLE                 ")] = "southwest"
 
-full_data$submarket[which(full_data$LA_DESC == "VINCENT                  " | full_data$LA_DESC == "SUBIACO                  " | full_data$LA_DESC == "NEDLANDS                 " | full_data$LA_DESC == "MOSMAN PARK              " | full_data$LA_DESC == "PEPPERMINT GROVE         " | full_data$LA_DESC == "CAMBRIDGE                " | full_data$LA_DESC == "CLAREMONT                " | full_data$LA_DESC == "COTTESLOE                ")] = "inner"
+full_data$submarket[which(full_data$LA_DESC == "VINCENT                  " | full_data$LA_DESC == "SUBIACO                  " | full_data$LA_DESC == "NEDLANDS                 " | full_data$LA_DESC == "MOSMAN PARK              " | full_data$LA_DESC == "PEPPERMINT GROVE         " | full_data$LA_DESC == "CAMBRIDGE                " | full_data$LA_DESC == "CLAREMONT                " | full_data$LA_DESC == "COTTESLOE                " | full_data$LA_DESC == "PERTH CITY COUNCIL       ")] = "inner"
 
 
 #non-strata arm-length transaction, within boundaries yearly in each area
+#2004
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 40000 & full_data$SALE1 <= 2750000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 42975 & full_data$SALE1 <= 2050000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 40000 & full_data$SALE1 <= 2050000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 44000 & full_data$SALE1 <= 3700000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 50000 & full_data$SALE1 <= 4725000 & full_data$d_residential == 1] = 1
+
+#2005
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 48000 & full_data$SALE1 <= 3000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 54345 & full_data$SALE1 <= 2700000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 47482 & full_data$SALE1 <= 2427273 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 52500 & full_data$SALE1 <= 4500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 31180 & full_data$SALE1 <= 8850000 & full_data$d_residential == 1] = 1
+
+#2006
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 66000 & full_data$SALE1 <= 5000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 66300 & full_data$SALE1 <= 4650000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 67500 & full_data$SALE1 <= 3400000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 66066 & full_data$SALE1 <= 4800000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 94368 & full_data$SALE1 <= 15000000 & full_data$d_residential == 1] = 1
+
+#2007
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 88200 & full_data$SALE1 <= 5500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 76000 & full_data$SALE1 <= 6800000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 74300 & full_data$SALE1 <= 3700000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 76600 & full_data$SALE1 <= 6250000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 70698 & full_data$SALE1 <= 16000000 & full_data$d_residential == 1] = 1
+
+#2008
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 75000 & full_data$SALE1 <= 2300000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 76306 & full_data$SALE1 <= 6385500 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 72000 & full_data$SALE1 <= 4230000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 77660 & full_data$SALE1 <= 6000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 87500 & full_data$SALE1 <= 20000000 & full_data$d_residential == 1] = 1
+
+#2009
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 74000 & full_data$SALE1 <= 2500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 73515 & full_data$SALE1 <= 4750000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 74000 & full_data$SALE1 <= 3270000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 73000 & full_data$SALE1 <= 6000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 101750 & full_data$SALE1 <= 15000000 & full_data$d_residential == 1] = 1
+
+#2010
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 81000 & full_data$SALE1 <= 3770000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 74000 & full_data$SALE1 <= 4500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 80000 & full_data$SALE1 <= 4200000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 82650 & full_data$SALE1 <= 5500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 100000 & full_data$SALE1 <= 16800000 & full_data$d_residential == 1] = 1
+
+#2011
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 92385 & full_data$SALE1 <= 3030000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 86250 & full_data$SALE1 <= 7200000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 85000 & full_data$SALE1 <= 4625000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 93750 & full_data$SALE1 <= 6100000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 9200000 & full_data$d_residential == 1] = 1
+
+#2012
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 93000 & full_data$SALE1 <= 3500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 93500 & full_data$SALE1 <= 4800000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 92800 & full_data$SALE1 <= 4500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 93000 & full_data$SALE1 <= 6900000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 129750 & full_data$SALE1 <= 15000000 & full_data$d_residential == 1] = 1
+
+#2013
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 73000 & full_data$SALE1 <= 5764528 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 100000 & full_data$SALE1 <= 4750000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 99900 & full_data$SALE1 <= 4800000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 103500 & full_data$SALE1 <= 8000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 110000 & full_data$SALE1 <= 13000000 & full_data$d_residential == 1] = 1
+
+#2014
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 108000 & full_data$SALE1 <= 5500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 108000 & full_data$SALE1 <= 7500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 0 & full_data$submarket == "southeast" & full_data$SALE1 >= 111000 & full_data$SALE1 <= 5800000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 0 & full_data$submarket == "southwest" & full_data$SALE1 >= 114000 & full_data$SALE1 <= 8500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 0 & full_data$submarket == "inner" & full_data$SALE1 >= 124267 & full_data$SALE1 <= 10000000 & full_data$d_residential == 1] = 1
+
 #2015
 full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 0 & full_data$submarket == "northeast" & full_data$SALE1 >= 117600 & full_data$SALE1 <= 7416876 & full_data$d_residential == 1] = 1
 full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 0 & full_data$submarket == "northwest" & full_data$SALE1 >= 117000 & full_data$SALE1 <= 9620000 & full_data$d_residential == 1] = 1
@@ -236,6 +313,83 @@ full_data$d_armlength[full_data$year_sale == 2020 & full_data$d_strata == 0 & fu
 
 
 #strata arm-length transaction, within boundaries yearly in each area
+#2004
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 37500 & full_data$SALE1 <= 610000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 43000 & full_data$SALE1 <= 730000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 45000 & full_data$SALE1 <= 1070000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 60000 & full_data$SALE1 <= 735000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2004 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 48000 & full_data$SALE1 <= 677500 & full_data$d_residential == 1] = 1
+
+#2005
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 50000 & full_data$SALE1 <= 590000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 60000 & full_data$SALE1 <= 960000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 50025 & full_data$SALE1 <= 680000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 70000 & full_data$SALE1 <= 820000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2005 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 50000 & full_data$SALE1 <= 2240000 & full_data$d_residential == 1] = 1
+
+#2006
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 95000 & full_data$SALE1 <= 870000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 75000 & full_data$SALE1 <= 1120000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 86667 & full_data$SALE1 <= 5100000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 67500 & full_data$SALE1 <= 1075000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2006 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 90000 & full_data$SALE1 <= 2275000 & full_data$d_residential == 1] = 1
+
+#2007
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 91500 & full_data$SALE1 <= 575000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 80000 & full_data$SALE1 <= 1200000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 92166 & full_data$SALE1 <= 1100000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 100000 & full_data$SALE1 <= 1220000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2007 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 100000 & full_data$SALE1 <= 2020000 & full_data$d_residential == 1] = 1
+
+#2008
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 130000 & full_data$SALE1 <= 750000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 99000 & full_data$SALE1 <= 950000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 92400 & full_data$SALE1 <= 1130000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 93000 & full_data$SALE1 <= 1110000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2008 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 115000 & full_data$SALE1 <= 1500000 & full_data$d_residential == 1] = 1
+
+#2009
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 76000 & full_data$SALE1 <= 1035000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 111600 & full_data$SALE1 <= 2300000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 80325 & full_data$SALE1 <= 1260000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 100750 & full_data$SALE1 <= 1200000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2009 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 80850 & full_data$SALE1 <= 1750000 & full_data$d_residential == 1] = 1
+
+#2010
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 115500 & full_data$SALE1 <= 950000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 80750 & full_data$SALE1 <= 2400000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 107500 & full_data$SALE1 <= 1175000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 140000 & full_data$SALE1 <= 1170000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2010 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 81000 & full_data$SALE1 <= 2750000 & full_data$d_residential == 1] = 1
+
+#2011
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 110000 & full_data$SALE1 <= 1195000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 90000 & full_data$SALE1 <= 1075000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 85500 & full_data$SALE1 <= 1050000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 91950 & full_data$SALE1 <= 1400000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2011 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 91666 & full_data$SALE1 <= 4500000 & full_data$d_residential == 1] = 1
+
+#2012
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 132500 & full_data$SALE1 <= 720000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 110000 & full_data$SALE1 <= 1500000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 100000 & full_data$SALE1 <= 1200000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 132000 & full_data$SALE1 <= 1525000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2012 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 100000 & full_data$SALE1 <= 1995000 & full_data$d_residential == 1] = 1
+
+#2013
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 110000 & full_data$SALE1 <= 1300000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 81000 & full_data$SALE1 <= 1130000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 108750 & full_data$SALE1 <= 4300000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 130000 & full_data$SALE1 <= 2450000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2013 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 169000 & full_data$SALE1 <= 1850000 & full_data$d_residential == 1] = 1
+
+#2014
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 132547 & full_data$SALE1 <= 675000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 118000 & full_data$SALE1 <= 1287000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 1 & full_data$submarket == "southeast" & full_data$SALE1 >= 120000 & full_data$SALE1 <= 1955000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 1 & full_data$submarket == "southwest" & full_data$SALE1 >= 120000 & full_data$SALE1 <= 4000000 & full_data$d_residential == 1] = 1
+full_data$d_armlength[full_data$year_sale == 2014 & full_data$d_strata == 1 & full_data$submarket == "inner" & full_data$SALE1 >= 113000 & full_data$SALE1 <= 2750000 & full_data$d_residential == 1] = 1
+
 #2015
 full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 1 & full_data$submarket == "northeast" & full_data$SALE1 >= 150000 & full_data$SALE1 <= 870000 & full_data$d_residential == 1] = 1
 full_data$d_armlength[full_data$year_sale == 2015 & full_data$d_strata == 1 & full_data$submarket == "northwest" & full_data$SALE1 >= 120000 & full_data$SALE1 <= 1450000 & full_data$d_residential == 1] = 1
