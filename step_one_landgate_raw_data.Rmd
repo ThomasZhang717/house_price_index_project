@@ -467,15 +467,15 @@ full_data_merge = union(full_data_merge, duplicates_clean)
 #quarter numbers
 full_data_merge$quarter = quarter(ymd(full_data_merge$DATE1))
 
-full_data_merge$quarter_num = (full_data_merge$year_sale - 2003)*4 + full_data_merge$quarter
+full_data_merge$quarter_num = (full_data_merge$year_sale - 2004)*4 + full_data_merge$quarter
 
 #import index file
-abs_index = read.csv(file = "./abs_index.csv")
+abs_index = read.csv(file = "./data/abs_index.csv")
 
 #flat sale price to 2011-2012 financial year
 full_data_merge$sale_flat = NA
 #flat by price index
-for (i in 1:24) {
+for (i in 1:68) {
   full_data_merge$sale_flat[which(full_data_merge$quarter_num == i)] = full_data_merge$SALE1[which(full_data_merge$quarter_num == i)]/abs_index$index_num[i] * 100
 }
 ```
@@ -508,7 +508,7 @@ full_data_merge$carpark = full_data_merge$CARPRT_A + full_data_merge$CARPRT_D + 
 
 #import spatial data
 ```{r}
-spatial_data = read.dbf("./Transaction data/Cadastre_Polygon_Current.dbf")
+spatial_data = read.dbf("./data/Cadastre_Polygon_Current.dbf")
 ```
 
 
@@ -586,24 +586,5 @@ full_data_merge = full_data_merge %>%
 
 #save the data file for next steps
 ```{r}
-write.csv(full_data_merge, "./cleaned_data_2015_2020_paperversion_geocomplete_0tomiss.csv")
-```
-
-
-
-#read past geocoded data
-```{r}
-geocode_2015 = read.csv("./cleaned_data_2015_2020_paperversion_geocomplete.csv")[-1]
-
-#match the geocodes
-coords_na = which(is.na(full_data_merge$centlat))
-full_data_merge$address = paste0(full_data_merge$ST_NO, full_data_merge$ST_NAME, full_data_merge$ST_SUFX, ",", full_data_merge$SUBURB, ", WA", sep = "")
-
-for (i in coords_na) {
-  
-  full_data_merge$centlat[i] = geocode_2015$centlat[which(geocode_2015$address == full_data_merge$address[i])[1]]
-  full_data_merge$centlong[i] = geocode_2015$centlong[which(geocode_2015$address == full_data_merge$address[i])[1]]
-  print(i)
-}
-#1 school st, kalamunda -31.9698041;116.0574984
+write.csv(full_data_merge, "./data/raw_data_2004_2020.csv")
 ```
