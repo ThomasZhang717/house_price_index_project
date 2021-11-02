@@ -540,7 +540,7 @@ for (i in coords_na) {
 
 #google geocode api
 #httr::set_config(httr::use_proxy(url = "http://127.0.0.1", port = 7890), override = TRUE)
-#register_google(key = "need to reapply a google map API")
+#register_google(key = "fill the key") #when use this code find google api in /others, after using need to delete this API key
 #coords_na = which(is.na(full_data_merge$centlat))
 #for (i in coords_na) {
 #  temp = geocode(full_data_merge$address[i], output = "latlona")
@@ -548,6 +548,69 @@ for (i in coords_na) {
 #  full_data_merge$centlong[i] = temp$lon
 #  print(i)
 #}
+
+
+#check coordinates after geocoding
+full_data_merge$centlong[which(full_data_merge$centlat > -31 | full_data_merge$centlat < -33)] = NA
+full_data_merge$centlat[which(full_data_merge$centlat > -31 | full_data_merge$centlat < -33)] = NA
+
+
+coords_na = which(is.na(full_data_merge$centlat))
+#the addresses need to find coordinates mannually
+# "331 & 333ROBERTS                            RD    ,SUBIACO                  , West Australia" -31.9456515,115.8266493
+full_data_merge$centlong[which(full_data_merge$address == "331 & 333ROBERTS                            RD    ,SUBIACO                  , West Australia")] = 115.8266493
+full_data_merge$centlat[which(full_data_merge$address == "331 & 333ROBERTS                            RD    ,SUBIACO                  , West Australia")] = -31.9456515
+# "105 & 107MANNING                            ST    ,SCARBOROUGH              , West Australia" -31.8921936,115.7667525
+full_data_merge$centlong[which(full_data_merge$address == "105 & 107MANNING                            ST    ,SCARBOROUGH              , West Australia")] = 115.7667525
+full_data_merge$centlat[which(full_data_merge$address == "105 & 107MANNING                            ST    ,SCARBOROUGH              , West Australia")] = -31.8921936
+# "196 & 198SACKVILLE                          TCE   ,DOUBLEVIEW               , West Australia" -31.8877961,115.7867656
+full_data_merge$centlong[which(full_data_merge$address == "196 & 198SACKVILLE                          TCE   ,DOUBLEVIEW               , West Australia")] = 115.7867656
+full_data_merge$centlat[which(full_data_merge$address == "196 & 198SACKVILLE                          TCE   ,DOUBLEVIEW               , West Australia")] = -31.8877961
+# "156 & 158HIGH                               RD    ,RIVERTON                 , West Australia" -32.0384618,115.8825126
+full_data_merge$centlong[which(full_data_merge$address == "156 & 158HIGH                               RD    ,RIVERTON                 , West Australia")] = 115.8825126
+full_data_merge$centlat[which(full_data_merge$address == "156 & 158HIGH                               RD    ,RIVERTON                 , West Australia")] = -32.0384618
+# "381 & 383LAKESIDE                           DR    ,JOONDALUP                , West Australia" -31.7353863,115.7739734
+full_data_merge$centlong[which(full_data_merge$address == "381 & 383LAKESIDE                           DR    ,JOONDALUP                , West Australia")] = 115.7739734
+full_data_merge$centlat[which(full_data_merge$address == "381 & 383LAKESIDE                           DR    ,JOONDALUP                , West Australia")] = -31.7353863
+# "134 & 136FIRST                              AV    ,EDEN HILL                , West Australia" -31.894152,115.9482051
+full_data_merge$centlong[which(full_data_merge$address == "134 & 136FIRST                              AV    ,EDEN HILL                , West Australia")] = 115.9482051
+full_data_merge$centlat[which(full_data_merge$address == "134 & 136FIRST                              AV    ,EDEN HILL                , West Australia")] = -31.894152
+# "13 B     KNOWSLEY EAST                      ST    ,SUCCESS                  , West Australia" (Can't find this address, use central point of SUCCESS suburb) -32.1429267,115.8481135
+full_data_merge$centlong[which(full_data_merge$address == "13 B     KNOWSLEY EAST                      ST    ,SUCCESS                  , West Australia")] = 115.8481135
+full_data_merge$centlat[which(full_data_merge$address == "13 B     KNOWSLEY EAST                      ST    ,SUCCESS                  , West Australia")] = -32.1429267
+# "111 & 113WALPOLE                            ST    ,BENTLEY                  , West Australia" -32.0073646,115.9048608
+full_data_merge$centlong[which(full_data_merge$address == "111 & 113WALPOLE                            ST    ,BENTLEY                  , West Australia")] = 115.9048608
+full_data_merge$centlat[which(full_data_merge$address == "111 & 113WALPOLE                            ST    ,BENTLEY                  , West Australia")] = -32.0073646
+# "61       OXFORD                             ST    ,COMO                     , West Australia" (Axford street) -32.0040473,115.8674961
+full_data_merge$centlong[which(full_data_merge$address == "61       OXFORD                             ST    ,COMO                     , West Australia")] = 115.8674961
+full_data_merge$centlat[which(full_data_merge$address == "61       OXFORD                             ST    ,COMO                     , West Australia")] = -32.0040473
+# "2        LAHINCH                            VSTA  ,GNANGARA                 , West Australia" -31.7729771,115.8609964
+full_data_merge$centlong[which(full_data_merge$address == "2        LAHINCH                            VSTA  ,GNANGARA                 , West Australia")] = 115.8609964
+full_data_merge$centlat[which(full_data_merge$address == "2        LAHINCH                            VSTA  ,GNANGARA                 , West Australia")] = -31.7729771
+# "49       FORBES                             ST    ,NORTHBRIDGE              , West Australia" (Forbes road) -31.9439893,115.8596555
+full_data_merge$centlong[which(full_data_merge$address == "49       FORBES                             ST    ,NORTHBRIDGE              , West Australia")] = 115.8596555
+full_data_merge$centlat[which(full_data_merge$address == "49       FORBES                             ST    ,NORTHBRIDGE              , West Australia")] = -31.9439893
+# "222 & 224HIGH                               ST    ,FREMANTLE                , West Australia" -32.0506137,115.7587977
+full_data_merge$centlong[which(full_data_merge$address == "222 & 224HIGH                               ST    ,FREMANTLE                , West Australia")] = 115.7587977
+full_data_merge$centlat[which(full_data_merge$address == "222 & 224HIGH                               ST    ,FREMANTLE                , West Australia")] = -32.0506137
+# "46 A     NICHOLSON                          CR    ,HILTON                   , West Australia" (Nicholas Crescent) -32.0689418,115.7865819
+full_data_merge$centlong[which(full_data_merge$address == "46 A     NICHOLSON                          CR    ,HILTON                   , West Australia")] = 115.7865819
+full_data_merge$centlat[which(full_data_merge$address == "46 A     NICHOLSON                          CR    ,HILTON                   , West Australia")] = -32.0689418
+# "45       FORBES                             ST    ,NORTHBRIDGE              , West Australia" -31.9440394,115.8599176
+full_data_merge$centlong[which(full_data_merge$address == "45       FORBES                             ST    ,NORTHBRIDGE              , West Australia")] = 115.8599176
+full_data_merge$centlat[which(full_data_merge$address == "45       FORBES                             ST    ,NORTHBRIDGE              , West Australia")] = -31.9440394
+# "214 & 216WHARF                              ST    ,QUEENS PARK              , West Australia" -32.0076502,115.9420759
+full_data_merge$centlong[which(full_data_merge$address == "214 & 216WHARF                              ST    ,QUEENS PARK              , West Australia")] = 115.9420759
+full_data_merge$centlat[which(full_data_merge$address == "214 & 216WHARF                              ST    ,QUEENS PARK              , West Australia")] = -32.0076502
+# "66       DALY                               RD    ,DARLINGTON               , West Australia" (Dalry road) -31.9163382,116.0858778
+full_data_merge$centlong[which(full_data_merge$address == "66       DALY                               RD    ,DARLINGTON               , West Australia")] = 116.0858778
+full_data_merge$centlat[which(full_data_merge$address == "66       DALY                               RD    ,DARLINGTON               , West Australia")] = -31.9163382
+# "8        TRINITY                            WAY   ,CLARKSON                 , West Australia" (geo wrong) -31.6873368,115.7302331   
+full_data_merge$centlong[which(full_data_merge$address == "8        TRINITY                            WAY   ,CLARKSON                 , West Australia")] = 115.7302331
+full_data_merge$centlat[which(full_data_merge$address == "8        TRINITY                            WAY   ,CLARKSON                 , West Australia")] = -31.6873368
+# "28       YORK                               ST    ,MAYLANDS                 , West Australia" (geo wrong) -31.9217378,115.8910793
+full_data_merge$centlong[which(full_data_merge$address == "28       YORK                               ST    ,MAYLANDS                 , West Australia")] = 115.8910793
+full_data_merge$centlat[which(full_data_merge$address == "28       YORK                               ST    ,MAYLANDS                 , West Australia")] = -31.9217378
 ```
 
 
@@ -586,5 +649,6 @@ full_data_merge = full_data_merge %>%
 
 #save the data file for next steps
 ```{r}
-write.csv(full_data_merge, "./data/raw_data_2004_2020.csv")
+write.csv(full_data_merge, "./data/raw_data_2004_2020_RPPI.csv")
 ```
+
