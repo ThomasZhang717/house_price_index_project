@@ -529,7 +529,7 @@ full_data_merge = full_data_merge %>%
 ```{r}
 #open source geocode api
 coords_na = which(is.na(full_data_merge$centlat))
-full_data_merge$address = paste0(full_data_merge$ST_NO, full_data_merge$ST_NAME, full_data_merge$ST_SUFX, ",", full_data_merge$SUBURB, ", WA", sep = "")
+full_data_merge$address = paste0(full_data_merge$ST_NO, full_data_merge$ST_NAME, full_data_merge$ST_SUFX, ",", full_data_merge$SUBURB, ", West Australia", sep = "")
 
 for (i in coords_na) {
   temp = geo(full_data_merge$address[i])
