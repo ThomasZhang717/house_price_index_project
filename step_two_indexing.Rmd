@@ -1,0 +1,84 @@
+---
+title: "step_two_indexing"
+author: "Zhuoran"
+date: "17/11/2021"
+output: html_document
+---
+
+
+#libraries
+```{r}
+library(foreign)
+library(dplyr)
+library(lubridate)
+library(gbm)
+library(pdp)
+library(doParallel)
+library(foreach)
+library(ggplot2)
+```
+
+
+#import data
+```{r}
+full_data = read.csv("./data/raw_data_2004_2020_RPPI.csv")[-1]
+
+full_data$LA_DESC = as.factor(full_data$LA_DESC)
+full_data$PROP_CLA = as.factor(full_data$PROP_CLA)
+full_data$submarket = as.factor(full_data$submarket)
+full_data$logprice = log(full_data$SALE1)
+```
+
+
+#prepare data for modeling
+```{r}
+model = data.frame(logprice = full_data$logprice,
+                   quarter_num = full_data$quarter_num, 
+                   LAND_ARE = full_data$LAND_ARE, 
+                   AREA_HSE = full_data$AREA_HSE, 
+                   age = full_data$age, 
+                   BEDS = full_data$BEDS,
+                   BATHS = full_data$BATHS, 
+                   DINING = full_data$DINING, 
+                   KITCHEN = full_data$KITCHEN, 
+                   FAMILY = full_data$FAMILY, 
+                   STUDY = full_data$STUDY, 
+                   GAMES = full_data$GAMES, 
+                   LOUNGE = full_data$LOUNGE, 
+                   MEALS = full_data$MEALS, 
+                   carpark = full_data$carpark, 
+                   LA_DESC = full_data$LA_DESC, 
+                   PROP_CLA = full_data$PROP_CLA, 
+                   centlong = full_data$centlong, 
+                   centlat = full_data$centlat, 
+                   TENCRT = full_data$TENCRT,
+                   d_pool = full_data$d_pool, 
+                   d_brick = full_data$d_brick, 
+                   d_tile = full_data$d_tile,
+                   submarket = full_data$submarket)
+
+#prepare windows for rolling process
+#for (i in 1:61) {
+#  temp_train = model[which(model$quarter_num <= (7+i) & model$quarter_num >= i),]
+#  
+#  assign(paste0("train_window_", i), temp_train)
+#}
+```
+
+
+#indexing full data process
+```{r}
+set.seed(717)
+gbm_full = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT + submarket, data = model, distribution = "laplace", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
+
+
+#partial dependence plot: just quarter number
+set.seed(717)
+pdp_quarters = partial(object = gbm_full,
+                       train = model[sample(1:nrow(model), replace = TRUE), ],
+                       pred.var = "quarter_num",
+                       n.trees = 2000,
+                       pred.grid = data.frame(quarter_num = 1:max(model$quarter_num)))
+```
+
+
