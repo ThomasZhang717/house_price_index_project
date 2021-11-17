@@ -625,12 +625,13 @@ full_data_merge$LAND_ARE[which(full_data_merge$legal_area/full_data_merge$LAND_A
 ```{r}
 full_data_merge$LAND_ARE[which(full_data_merge$LAND_ARE == 0)] = NA
 full_data_merge$AREA_HSE[which(full_data_merge$AREA_HSE == 0)] = NA
-full_data_merge$YEAR_BUI[which(full_data_merge$YEAR_BUI == 0)] = NA
+full_data_merge$YEAR_BUI[which(full_data_merge$YEAR_BUI < 1860)] = NA
 full_data_merge$BEDS[which(full_data_merge$BEDS == 0)] = NA
 full_data_merge$BATHS[which(full_data_merge$BATHS == 0)] = NA
 full_data_merge$KITCHEN[which(full_data_merge$KITCHEN == 0)] = NA
 full_data_merge$LOUNGE[which(full_data_merge$LOUNGE == 0)] = NA
 full_data_merge$age = full_data_merge$year_sale - full_data_merge$YEAR_BUI
+#correct land area 5010000 to 501 in victoria park
 full_data_merge$LAND_ARE[which(full_data_merge$LAND_ARE == 5010000)] = 501
 ```
 
