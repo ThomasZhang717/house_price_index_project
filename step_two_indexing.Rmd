@@ -69,16 +69,58 @@ model = data.frame(logprice = full_data$logprice,
 #indexing full data process
 ```{r}
 set.seed(717)
-gbm_full = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT + submarket, data = model, distribution = "laplace", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
+gbm_full = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT + submarket, data = model, distribution = "gaussian", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5) #distribution = "laplace", if use laplace or MAE, two or more dimensional pdp generates the same predict numbers. Thus, gaussian (MSE) could be better. And then, paper one, the difference is negligible.
 
 
 #partial dependence plot: just quarter number
 set.seed(717)
 pdp_quarters = partial(object = gbm_full,
-                       train = model[sample(1:nrow(model), replace = TRUE), ],
+                       train = model,
                        pred.var = "quarter_num",
                        n.trees = 2000,
                        pred.grid = data.frame(quarter_num = 1:max(model$quarter_num)))
+
+
+#partial dependence plot: quarter number and submarket
+set.seed(717)
+pdp_quarters_submarket = partial(object = gbm_full,
+                       train = model,
+                       pred.var = c("quarter_num", "submarket"),
+                       n.trees = 2000,
+                       pred.grid = data.frame(quarter_num = sort(rep(1:max(model$quarter_num), 5)), submarket = c("inner","northeast","northwest","southeast","southwest")))
+
+
+#partial dependence plot: quarter number and property class
+set.seed(717)
+pdp_quarters_class = partial(object = gbm_full,
+                       train = model,
+                       pred.var = c("quarter_num", "PROP_CLA"),
+                       n.trees = 2000,
+                       pred.grid = data.frame(quarter_num = sort(rep(1:max(model$quarter_num), 20)), PROP_CLA = c("APARTMENT HO", "DETACHED HOU", "DUPLEX      ", "FLAT        ", "GROUP HOUSE ", "HOLIDAY UNIT", "HOME UNIT   ", "HOUSE       ", "HOUSE - FLAT", "HOUSE - GRAN", "HOUSE - LAND", "HOUSE - UNIT", "PATIO HOUSE ", "QUADRUPLEX  ", "ROW HOUSE   ", "SEMI-DETACHE", "TERRACE HOUS", "TOWN HOUSE  ", "TRIPLEX     ", "VILLA HOUSE ")))
+
+
+#partial dependence plot: quarter number, property class and submarket (something like this, could develop more, this one is more flexible)
+set.seed(717)
+pdp_quarters_submarket_class = partial(object = gbm_full,
+                       train = model,
+                       pred.var = c("quarter_num", "submarket", "PROP_CLA"),
+                       n.trees = 2000,
+                       pred.grid = data.frame(quarter_num = sort(rep(1:max(model$quarter_num), 100)), submarket = c(rep("inner", 20),rep("northeast", 20),rep("northwest", 20),rep("southeast", 20),rep("southwest", 20)), PROP_CLA = c("APARTMENT HO", "DETACHED HOU", "DUPLEX      ", "FLAT        ", "GROUP HOUSE ", "HOLIDAY UNIT", "HOME UNIT   ", "HOUSE       ", "HOUSE - FLAT", "HOUSE - GRAN", "HOUSE - LAND", "HOUSE - UNIT", "PATIO HOUSE ", "QUADRUPLEX  ", "ROW HOUSE   ", "SEMI-DETACHE", "TERRACE HOUS", "TOWN HOUSE  ", "TRIPLEX     ", "VILLA HOUSE ")))
+```
+
+
+#simply construct rppi, reference period is financial year 2011-2012
+```{r}
+baseline = mean(pdp_quarters[31:34,2])
+pdp_quarters$index = exp(pdp_quarters$yhat - baseline) * 100
+pdp_quarters_submarket$index = exp(pdp_quarters_submarket$yhat - baseline) * 100
+pdp_quarters_class$index = exp(pdp_quarters_class$yhat - baseline) * 100
+pdp_quarters_submarket_class$index = exp(pdp_quarters_submarket_class$yhat - baseline) * 100
+
+
+ggplot(pdp_quarters, aes(quarter_num, index)) + geom_line()
+ggplot(pdp_quarters_submarket, aes(quarter_num, index, color = submarket)) + geom_line()
+ggplot(pdp_quarters_class, aes(quarter_num, index, color = PROP_CLA)) + geom_line()
 ```
 
 
