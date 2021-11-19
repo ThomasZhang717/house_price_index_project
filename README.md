@@ -9,7 +9,7 @@ Working Process
 - Model Testing.
   - [ ] Model testing using different strategies and default parameters (Gaussian, 2000, 14, 0.05, 15, 0.5)
     - [x] Full time period strategy.
-    - [ ] Rolling windows strategy.
+    - [X] Rolling windows strategy.
     - [ ] Cross section strategy.
 - Paper Writing.
   - [ ] Data section

@@ -27,6 +27,10 @@ full_data$LA_DESC = as.factor(full_data$LA_DESC)
 full_data$PROP_CLA = as.factor(full_data$PROP_CLA)
 full_data$submarket = as.factor(full_data$submarket)
 full_data$logprice = log(full_data$SALE1)
+
+#we can use some properties which sale more than twice as the index test part(use parcel id to track them, shared land properties may have the same land id)
+#temp = data.frame(table(full_data$PARCEL_I))
+#sum(temp$Freq>2)
 ```
 
 
@@ -56,13 +60,6 @@ model = data.frame(logprice = full_data$logprice,
                    d_brick = full_data$d_brick, 
                    d_tile = full_data$d_tile,
                    submarket = full_data$submarket)
-
-#prepare windows for rolling process
-#for (i in 1:61) {
-#  temp_train = model[which(model$quarter_num <= (7+i) & model$quarter_num >= i),]
-#  
-#  assign(paste0("train_window_", i), temp_train)
-#}
 ```
 
 
@@ -124,3 +121,38 @@ ggplot(pdp_quarters_class, aes(quarter_num, index, color = PROP_CLA)) + geom_lin
 ```
 
 
+
+
+#indexing rolling windows process
+```{r}
+#prepare windows for rolling process
+for (i in 1:61) {
+  temp_train = model[which(model$quarter_num <= (7+i) & model$quarter_num >= i),]
+  
+  assign(paste0("train_window_", i), temp_train)
+}
+
+
+#rolling window 8 quarters
+for(i in 1:61){
+  model_window = get(paste0("train_window_",i))
+  
+  #model in window
+  set.seed(717)
+  gbm_window = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT + submarket, data = model_window, distribution = "gaussian", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
+  
+  #partial dependence plot: just 8 quarters
+  set.seed(717)
+  pdp_window = partial(object = gbm_window,
+                       train = model_window,
+                       pred.var = "quarter_num",
+                       n.trees = 2000,
+                       pred.grid = data.frame(quarter_num = 1:max(model_window$quarter_num)))
+  
+  #save model and pdp
+  assign(paste0("gbm_window_",i), gbm_window)
+  assign(paste0("pdp_window_",i), pdp_window)
+  
+  print(paste0("window ",i," is done."))
+}
+```
