@@ -134,7 +134,7 @@ for (i in 1:61) {
   assign(paste0("train_window_", i), temp_train)
 }
 
-quarter_num = 1:68
+
 #rolling window 8 quarters
 for(i in 1:61){
   model_window = get(paste0("train_window_",i))
@@ -149,7 +149,7 @@ for(i in 1:61){
                        train = model_window,
                        pred.var = "quarter_num",
                        n.trees = 2000,
-                       pred.grid = data.frame(quarter_num = quarter_num))
+                       pred.grid = data.frame(quarter_num = min(model_window$quarter_num):max(model_window$quarter_num)))
   
   #save model and pdp
   assign(paste0("gbm_window_",i), gbm_window)
