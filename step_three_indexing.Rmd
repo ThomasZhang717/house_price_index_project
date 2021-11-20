@@ -27,33 +27,6 @@ full_data$LA_DESC = as.factor(full_data$LA_DESC)
 full_data$PROP_CLA = as.factor(full_data$PROP_CLA)
 full_data$submarket = as.factor(full_data$submarket)
 full_data$logprice = log(full_data$SALE1)
-
-
-#this is used when train and test split (out of sample repeat sale accuracy evaluation)
-#we can use some properties which sale more than twice as the index test part(use parcel id to track them, shared land properties may have the same land id)
-model_train = data.frame()
-model_test = data.frame()
-parcelid = data.frame(table(full_data$PARCEL_I))
-for (i in 1:nrow(parcelid)) {
-  if(parcelid$Freq[i] <= 2){
-    temp = full_data[which(full_data$PARCEL_I == parcelid$Var1[i]),]
-    model_train = rbind(model_train, temp)
-  }
-  else{
-    temp = full_data[which(full_data$PARCEL_I == parcelid$Var1[i]),]
-    set.seed(i)
-    temp_train = temp[-sample(1:nrow(temp), 2, replace = FALSE),]
-    temp_test = temp
-    temp_test$train_test = "train"
-    set.seed(i)
-    temp_test$train_test[sample(1:nrow(temp), 2, replace = FALSE)] = "test"
-    temp_test = temp_test[order(temp_test$DATE1),]
-    
-    model_train = rbind(model_train, temp_train)
-    model_test = rbind(model_test, temp_test)
-  }
-  print(i)
-}
 ```
 
 
