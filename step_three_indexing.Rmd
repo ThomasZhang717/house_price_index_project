@@ -19,9 +19,10 @@ library(ggplot2)
 ```
 
 
+#hedonic indexing
 #import data
 ```{r}
-full_data = read.csv("./data/raw_data_2004_2020_RPPI.csv")[-1]
+full_data = read.csv("./data/raw_data_2004_2020_RPPI_hedonic_train.csv")[-1]
 
 full_data$LA_DESC = as.factor(full_data$LA_DESC)
 full_data$PROP_CLA = as.factor(full_data$PROP_CLA)
@@ -54,16 +55,19 @@ model = data.frame(logprice = model_train$logprice,
                    TENCRT = model_train$TENCRT,
                    d_pool = model_train$d_pool, 
                    d_brick = model_train$d_brick, 
-                   d_tile = model_train$d_tile,
-                   submarket = model_train$submarket)
+                   d_tile = model_train$d_tile)
 ```
 
 
 #indexing full data process
 ```{r}
 set.seed(717)
-gbm_full = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT + submarket, data = model, distribution = "gaussian", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5) #distribution = "laplace", if use laplace or MAE, two or more dimensional pdp generates the same predict numbers. Thus, gaussian (MSE) could be better. And then, paper one, the difference is negligible.
+gbm_full = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT, data = model, distribution = "gaussian", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5) #distribution = "laplace", if use laplace or MAE, two or more dimensional pdp generates the same predict numbers. Thus, gaussian (MSE) could be better. And then, paper one, the difference is negligible.
 
+
+quarter_num = 1:68
+LA_DESC = c("ARMADALE", "BASSENDEAN", "BAYSWATER", "BELMONT", "CAMBRIDGE", "CANNING", "CLAREMONT", "COCKBURN", "COTTESLOE", "EAST FREMANTLE", "FREMANTLE", "GOSNELLS", "JOONDALUP", "KALAMUNDA", "KWINANA", "MELVILLE", "MOSMAN PARK", "MUNDARING", "NEDLANDS", "PEPPERMINT GROVE", "PERTH CITY COUNCIL", "ROCKINGHAM", "SERPENTINE-JARRAHDALE", "SOUTH PERTH", "STIRLING", "SUBIACO", "SWAN", "VICTORIA PARK", "VINCENT", "WANNEROO")
+PROP_CLA = c("APARTMENT HO", "DETACHED HOU", "DUPLEX", "FLAT", "GROUP HOUSE", "HOLIDAY UNIT", "HOME UNIT", "HOUSE", "HOUSE - FLAT", "HOUSE - GRAN", "HOUSE - LAND", "HOUSE - UNIT", "PATIO HOUSE", "QUADRUPLEX", "ROW HOUSE", "SEMI-DETACHE", "TERRACE HOUS", "TOWN HOUSE", "TRIPLEX", "VILLA HOUSE")
 
 #partial dependence plot: just quarter number
 set.seed(717)
@@ -71,16 +75,16 @@ pdp_quarters = partial(object = gbm_full,
                        train = model,
                        pred.var = "quarter_num",
                        n.trees = 2000,
-                       pred.grid = data.frame(quarter_num = 1:max(model$quarter_num)))
+                       pred.grid = data.frame(quarter_num = quarter_num))
 
 
-#partial dependence plot: quarter number and submarket
+#partial dependence plot: quarter number and lga
 set.seed(717)
-pdp_quarters_submarket = partial(object = gbm_full,
+pdp_quarters_lga = partial(object = gbm_full,
                        train = model,
-                       pred.var = c("quarter_num", "submarket"),
+                       pred.var = c("quarter_num", "LA_DESC"),
                        n.trees = 2000,
-                       pred.grid = data.frame(quarter_num = sort(rep(1:max(model$quarter_num), 5)), submarket = c("inner","northeast","northwest","southeast","southwest")))
+                       pred.grid = data.frame(expand.grid(quarter_num = quarter_num, LA_DESC = LA_DESC)))
 
 
 #partial dependence plot: quarter number and property class
@@ -89,16 +93,16 @@ pdp_quarters_class = partial(object = gbm_full,
                        train = model,
                        pred.var = c("quarter_num", "PROP_CLA"),
                        n.trees = 2000,
-                       pred.grid = data.frame(quarter_num = sort(rep(1:max(model$quarter_num), 20)), PROP_CLA = c("APARTMENT HO", "DETACHED HOU", "DUPLEX      ", "FLAT        ", "GROUP HOUSE ", "HOLIDAY UNIT", "HOME UNIT   ", "HOUSE       ", "HOUSE - FLAT", "HOUSE - GRAN", "HOUSE - LAND", "HOUSE - UNIT", "PATIO HOUSE ", "QUADRUPLEX  ", "ROW HOUSE   ", "SEMI-DETACHE", "TERRACE HOUS", "TOWN HOUSE  ", "TRIPLEX     ", "VILLA HOUSE ")))
+                       pred.grid = data.frame(expand.grid(quarter_num = quarter_num, PROP_CLA = PROP_CLA)))
 
 
-#partial dependence plot: quarter number, property class and submarket (something like this, could develop more, this one is more flexible)
+#partial dependence plot: quarter number, property class and LGA (something like this, could develop more, this one is more flexible)
 set.seed(717)
-pdp_quarters_submarket_class = partial(object = gbm_full,
+pdp_quarters_lga_class = partial(object = gbm_full,
                        train = model,
-                       pred.var = c("quarter_num", "submarket", "PROP_CLA"),
+                       pred.var = c("quarter_num", "LA_DESC", "PROP_CLA"),
                        n.trees = 2000,
-                       pred.grid = data.frame(quarter_num = sort(rep(1:max(model$quarter_num), 100)), submarket = c(rep("inner", 20),rep("northeast", 20),rep("northwest", 20),rep("southeast", 20),rep("southwest", 20)), PROP_CLA = c("APARTMENT HO", "DETACHED HOU", "DUPLEX      ", "FLAT        ", "GROUP HOUSE ", "HOLIDAY UNIT", "HOME UNIT   ", "HOUSE       ", "HOUSE - FLAT", "HOUSE - GRAN", "HOUSE - LAND", "HOUSE - UNIT", "PATIO HOUSE ", "QUADRUPLEX  ", "ROW HOUSE   ", "SEMI-DETACHE", "TERRACE HOUS", "TOWN HOUSE  ", "TRIPLEX     ", "VILLA HOUSE ")))
+                       pred.grid = data.frame(quarter_num = quarter_num, LA_DESC = LA_DESC, PROP_CLA = PROP_CLA))
 ```
 
 
@@ -106,13 +110,13 @@ pdp_quarters_submarket_class = partial(object = gbm_full,
 ```{r}
 baseline = mean(pdp_quarters[31:34,2])
 pdp_quarters$index = exp(pdp_quarters$yhat - baseline) * 100
-pdp_quarters_submarket$index = exp(pdp_quarters_submarket$yhat - baseline) * 100
+pdp_quarters_lga$index = exp(pdp_quarters_lga$yhat - baseline) * 100
 pdp_quarters_class$index = exp(pdp_quarters_class$yhat - baseline) * 100
-pdp_quarters_submarket_class$index = exp(pdp_quarters_submarket_class$yhat - baseline) * 100
+pdp_quarters_lga_class$index = exp(pdp_quarters_lga_class$yhat - baseline) * 100
 
 
 ggplot(pdp_quarters, aes(quarter_num, index)) + geom_line()
-ggplot(pdp_quarters_submarket, aes(quarter_num, index, color = submarket)) + geom_line()
+ggplot(pdp_quarters_lga, aes(quarter_num, index, color = LA_DESC)) + geom_line()
 ggplot(pdp_quarters_class, aes(quarter_num, index, color = PROP_CLA)) + geom_line()
 ```
 
@@ -128,14 +132,14 @@ for (i in 1:61) {
   assign(paste0("train_window_", i), temp_train)
 }
 
-
+quarter_num = 1:68
 #rolling window 8 quarters
 for(i in 1:61){
   model_window = get(paste0("train_window_",i))
   
   #model in window
   set.seed(717)
-  gbm_window = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT + submarket, data = model_window, distribution = "gaussian", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
+  gbm_window = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT, data = model_window, distribution = "gaussian", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
   
   #partial dependence plot: just 8 quarters
   set.seed(717)
@@ -143,7 +147,7 @@ for(i in 1:61){
                        train = model_window,
                        pred.var = "quarter_num",
                        n.trees = 2000,
-                       pred.grid = data.frame(quarter_num = 1:max(model_window$quarter_num)))
+                       pred.grid = data.frame(quarter_num = quarter_num))
   
   #save model and pdp
   assign(paste0("gbm_window_",i), gbm_window)
@@ -152,3 +156,6 @@ for(i in 1:61){
   print(paste0("window ",i," is done."))
 }
 ```
+
+
+#resale indexing
