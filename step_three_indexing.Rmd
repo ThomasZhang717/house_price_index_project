@@ -102,7 +102,7 @@ pdp_quarters_lga_class = partial(object = gbm_full,
                        train = model,
                        pred.var = c("quarter_num", "LA_DESC", "PROP_CLA"),
                        n.trees = 2000,
-                       pred.grid = data.frame(quarter_num = quarter_num, LA_DESC = LA_DESC, PROP_CLA = PROP_CLA))
+                       pred.grid = data.frame(expand.grid(quarter_num = quarter_num, LA_DESC = LA_DESC, PROP_CLA = PROP_CLA)))
 
 save.image("./full_period_index.RData")
 ```
