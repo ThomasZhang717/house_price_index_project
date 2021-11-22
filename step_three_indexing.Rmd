@@ -20,42 +20,42 @@ library(ggplot2)
 
 
 #hedonic indexing
-#import data
+#import data (if use train_test_split_backup, no need to run this)
 ```{r}
-full_data = read.csv("./data/raw_data_2004_2020_RPPI_hedonic_train.csv")[-1]
+model_train_hedonic = read.csv("./data/raw_data_2004_2020_RPPI_hedonic_train.csv")[-1]
 
-full_data$LA_DESC = as.factor(full_data$LA_DESC)
-full_data$PROP_CLA = as.factor(full_data$PROP_CLA)
-full_data$submarket = as.factor(full_data$submarket)
-full_data$logprice = log(full_data$SALE1)
+model_train_hedonic$LA_DESC = as.factor(model_train_hedonic$LA_DESC)
+model_train_hedonic$PROP_CLA = as.factor(model_train_hedonic$PROP_CLA)
+model_train_hedonic$submarket = as.factor(model_train_hedonic$submarket)
+model_train_hedonic$logprice = log(model_train_hedonic$SALE1)
 ```
 
 
 #prepare data for modeling
 ```{r}
-model = data.frame(logprice = full_data$logprice,
-                   quarter_num = full_data$quarter_num, 
-                   LAND_ARE = full_data$LAND_ARE, 
-                   AREA_HSE = full_data$AREA_HSE, 
-                   age = full_data$age, 
-                   BEDS = full_data$BEDS,
-                   BATHS = full_data$BATHS, 
-                   DINING = full_data$DINING, 
-                   KITCHEN = full_data$KITCHEN, 
-                   FAMILY = full_data$FAMILY, 
-                   STUDY = full_data$STUDY, 
-                   GAMES = full_data$GAMES, 
-                   LOUNGE = full_data$LOUNGE, 
-                   MEALS = full_data$MEALS, 
-                   carpark = full_data$carpark, 
-                   LA_DESC = full_data$LA_DESC, 
-                   PROP_CLA = full_data$PROP_CLA, 
-                   centlong = full_data$centlong, 
-                   centlat = full_data$centlat, 
-                   TENCRT = full_data$TENCRT,
-                   d_pool = full_data$d_pool, 
-                   d_brick = full_data$d_brick, 
-                   d_tile = full_data$d_tile)
+model = data.frame(logprice = model_train_hedonic$logprice,
+                   quarter_num = model_train_hedonic$quarter_num, 
+                   LAND_ARE = model_train_hedonic$LAND_ARE, 
+                   AREA_HSE = model_train_hedonic$AREA_HSE, 
+                   age = model_train_hedonic$age, 
+                   BEDS = model_train_hedonic$BEDS,
+                   BATHS = model_train_hedonic$BATHS, 
+                   DINING = model_train_hedonic$DINING, 
+                   KITCHEN = model_train_hedonic$KITCHEN, 
+                   FAMILY = model_train_hedonic$FAMILY, 
+                   STUDY = model_train_hedonic$STUDY, 
+                   GAMES = model_train_hedonic$GAMES, 
+                   LOUNGE = model_train_hedonic$LOUNGE, 
+                   MEALS = model_train_hedonic$MEALS, 
+                   carpark = model_train_hedonic$carpark, 
+                   LA_DESC = model_train_hedonic$LA_DESC, 
+                   PROP_CLA = model_train_hedonic$PROP_CLA, 
+                   centlong = model_train_hedonic$centlong, 
+                   centlat = model_train_hedonic$centlat, 
+                   TENCRT = model_train_hedonic$TENCRT,
+                   d_pool = model_train_hedonic$d_pool, 
+                   d_brick = model_train_hedonic$d_brick, 
+                   d_tile = model_train_hedonic$d_tile)
 ```
 
 
@@ -162,4 +162,28 @@ save.image("./rolling_window_index.RData")
 ```
 
 
+
+
+
+
 #resale indexing
+#prepare resales
+```{r}
+#if use train_test_split_backpu, no need to run the next code
+model_train_resale = read.csv("./data/raw_data_2004_2020_RPPI_repeatsales_train.csv")[-1]
+resale = data.frame()
+for (i in 1:(nrow(model_train_resale)-1)) {
+  if(model_train_resale$PARCEL_I[i+1] == model_train_resale$PARCEL_I[i]){
+    temp = data.frame(sale = model_train_resale$SALE1[i+1], date = model_train_resale$DATE1[i+1], sale_pre = model_train_resale$SALE1[i], date_pre = model_train_resale$DATE1[i], PROP_CLA = model_train_resale$PROP_CLA[i], LA_DESC = model_train_resale$LA_DESC[i])
+    resale = rbind(resale, temp)
+    print(i)
+  }
+}
+```
+
+
+#resale index: case-shiller index
+```{r}
+```
+
+

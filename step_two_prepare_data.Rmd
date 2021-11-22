@@ -27,6 +27,7 @@ full_data$LA_DESC = as.factor(full_data$LA_DESC)
 full_data$PROP_CLA = as.factor(full_data$PROP_CLA)
 full_data$submarket = as.factor(full_data$submarket)
 full_data$logprice = log(full_data$SALE1)
+full_data$DATE1 = ymd(full_data$DATE1)
 ```
 
 
@@ -48,15 +49,55 @@ model_resale = full_data[which(full_data$sale_freq > 1),]
 
 model_resale = model_resale[order(model_resale$PARCEL_I, model_resale$DATE1),]
 
-model_resale$train_test = "train"
-
+parcelid = data.frame(table(model_resale$PARCEL_I))
+model_resale$update = 0
+#need to check repeat sales, no characteristics updates (same year build, same bedroom, same bathroom), no within six months (quater_num)
+#update
 for (i in 1:nrow(parcelid)){
-  if (parcelid$sale_freq[i] > 2){
+  temp = model_resale[which(model_resale$PARCEL_I == parcelid$Var1[i]),]
+  
+  if(length(unique(temp$YEAR_BUI)) != 1 | length(unique(temp$BEDS)) != 1 | length(unique(temp$BATHS)) != 1){
+    model_resale$update[which(model_resale$PARCEL_I == parcelid$Var1[i])] = 1
+  }
+  print(i)
+}
+
+#filter update resale
+model_resale = model_resale %>%
+  filter(model_resale$update == 0)
+
+
+model_resale$sixmonth = 0
+#less than six month
+for (i in 1:(nrow(model_resale)-1)) {
+  if(model_resale$PARCEL_I[i+1] == model_resale$PARCEL_I[i]){
+    if(model_resale$DATE1[i+1] - model_resale$DATE1[i] < 180){
+      model_resale$sixmonth[i+1] = 1
+    }
+  }
+  print(i)
+}
+
+#filter update resale
+model_resale = model_resale %>%
+  filter(model_resale$sixmonth == 0)
+
+parcelid = data.frame(table(model_resale$PARCEL_I))
+colnames(parcelid) = c("PARCEL_I", "resale_freq")
+model_resale = left_join(model_resale, parcelid, by = "PARCEL_I")
+model_resale = model_resale[which(model_resale$resale_freq > 1),]
+
+
+model_resale$train_test = "train"
+parcelid = data.frame(table(model_resale$PARCEL_I))
+colnames(parcelid) = c("PARCEL_I", "resale_freq")
+for (i in 1:nrow(parcelid)){
+  if (parcelid$resale_freq[i] > 2){
     set.seed(i)
-    n = sample(1:(parcelid$sale_freq[i]-2), 1, replace = FALSE)
-    temp = rep("train", parcelid$sale_freq[i])
+    n = sample(1:(parcelid$resale_freq[i]-2), 1, replace = FALSE)
+    temp = rep("train", parcelid$resale_freq[i])
     set.seed(i)
-    temp[sample(1:parcelid$sale_freq[i], n, replace = FALSE)] = "test"
+    temp[sample(1:parcelid$resale_freq[i], n, replace = FALSE)] = "test"
     model_resale$train_test[which(model_resale$PARCEL_I == parcelid$PARCEL_I[i])] = temp
   }
   print(i)
@@ -80,7 +121,7 @@ write.csv(model_train_resale, "./data/raw_data_2004_2020_RPPI_repeatsales_train.
 model_test = model_resale %>%
   filter(model_resale$train_test == "test")
 
-temp = model_test[,-100]
+temp = model_test[,-c(100:103)]
 
 model_train_hedonic = setdiff(full_data, temp)
 
