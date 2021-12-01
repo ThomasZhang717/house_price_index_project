@@ -27,7 +27,7 @@ bin-release/
 
 # Other files
 *.drawio
-*.html
+# *.html
 *.pdf
 
 # ignore folders
