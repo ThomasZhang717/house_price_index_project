@@ -31,8 +31,7 @@ bin-release/
 *.pdf
 
 # ignore folders
-/paper_files/
 /data/
-/output_files/
+/output_files
 /others/
 /useless_codes/
