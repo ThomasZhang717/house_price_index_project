@@ -32,6 +32,6 @@ bin-release/
 
 # ignore folders
 /data
-/output_files
+# /output_files
 /others
 /useless_codes
