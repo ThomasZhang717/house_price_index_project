@@ -516,7 +516,7 @@ resale_test = model_resale %>%
   filter(model_resale$resale_freq > 2)
 
 resale_test$resale_indexed_sale = 0
-esale_test$gbm_hedonic_indexed_sale = 0
+resale_test$gbm_hedonic_indexed_sale = 0
 resale_test$gbm_hedonic_indexed_sale_lad = 0
 
 #forward predict
