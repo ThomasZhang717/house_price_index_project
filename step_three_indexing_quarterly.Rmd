@@ -482,7 +482,7 @@ write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_lga_quarterly.csv
 #gbm pdp index
 ```{r}
 la_desc = data.frame(table(resale$LA_DESC))
-gbm_hedonic_index_impute = data.frame(quarter = 1:2040, rate = 1, LA_DESC = "", index = 100)
+gbm_hedonic_index_impute = data.frame(quarter = rep(1:68,30), rate = 1, LA_DESC = "", index = 100)
 
 n=1
 #traditional method
