@@ -1,5 +1,5 @@
 ---
-title: "step_three_indexing"
+title: "step_three_indexing_quarterly"
 author: "Zhuoran"
 date: "17/11/2021"
 output: html_document
@@ -63,7 +63,7 @@ model = data.frame(logprice = model_train_hedonic$logprice,
 #indexing full data process
 ```{r}
 set.seed(717)
-gbm_full = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT, data = model, distribution = "gaussian", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5) #distribution = "laplace", if use laplace or MAE, two or more dimensional pdp generates the same predict numbers. Thus, gaussian (MSE) could be better. And then, paper one, the difference is negligible.
+gbm_full = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT, data = model, distribution = "laplace", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
 
 
 quarter_num = 1:68
@@ -105,25 +105,20 @@ pdp_quarters_lga_class = partial(object = gbm_full,
                        n.trees = 2000,
                        pred.grid = data.frame(expand.grid(quarter_num = quarter_num, LA_DESC = LA_DESC, PROP_CLA = PROP_CLA)))
 
-save.image("./full_period_index.RData")
+save.image("./full_period_index_quarterly.RData")
 ```
 
 
 #global accuracy
 #simply construct rppi, reference period is financial year 2011-2012
 ```{r}
-#pdp_quarters$index = exp(pdp_quarters$yhat - baseline) * 100
-#pdp_quarters_lga$index = exp(pdp_quarters_lga$yhat - baseline) * 100
-#pdp_quarters_class$index = exp(pdp_quarters_class$yhat - baseline) * 100
-#pdp_quarters_lga_class$index = exp(pdp_quarters_lga_class$yhat - baseline) * 100
-
 #pdp_quarters
 #ls
 #gbm_hedonic_index = data.frame(quarter = 1:68, index = exp(pdp_quarters$yhat - pdp_quarters$yhat[1]) * 100)
 #write.csv(gbm_hedonic_index, "./data/gbm_hedonic_index.csv")
 #lad
 gbm_hedonic_index_lad = data.frame(quarter = 1:68, index = exp(pdp_quarters$yhat - pdp_quarters$yhat[1]) * 100)
-write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad.csv")
+write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_quarterly.csv")
 
 
 gbm_hedonic_index_impute = data.frame(quarter = 1:68, rate = 1, index = 100)
@@ -146,13 +141,13 @@ for (i in 1:67){
   print(i)
 }
 gbm_hedonic_index_impute = gbm_hedonic_index_impute[,-2]
-write.csv(gbm_hedonic_index_impute, "./data/gbm_hedonic_index_impute.csv")
+write.csv(gbm_hedonic_index_impute, "./data/gbm_hedonic_index_impute_quarterly.csv")
 ```
 
 
 
 
-#indexing rolling windows process
+#indexing rolling windows process(not using this one, save the code in case)
 ```{r}
 #prepare windows for rolling process
 for (i in 1:61) {
@@ -185,7 +180,7 @@ for(i in 1:61){
   print(paste0("window ",i," is done."))
 }
 
-save.image("./rolling_window_index.RData")
+save.image("./rolling_window_index_quarterly.RData")
 ```
 
 
@@ -196,7 +191,7 @@ save.image("./rolling_window_index.RData")
 #resale indexing
 #prepare resales
 ```{r}
-#if use train_test_split_backpu, no need to run the next code
+#if use train_test_split_backup, no need to run the next code
 #model_train_resale = read.csv("./data/raw_data_2004_2020_RPPI_repeatsales_train.csv")[-1]
 resale = data.frame()
 for (i in 1:(nrow(model_train_resale)-1)) {
@@ -231,7 +226,7 @@ resale_index = data.frame(quarter = 1:68)
 resale_index$index = exp(c(0, lm_resale$coefficients))
 resale_index$index = resale_index$index * 100
 
-write.csv(resale_index, "./data/resale_index.csv")
+write.csv(resale_index, "./data/resale_index_quarterly.csv")
 ```
 
 
@@ -480,7 +475,7 @@ for (i in seq(1,2040,68)) {
   gbm_hedonic_index_lad$index[i:(i+67)] = exp(gbm_hedonic_index_lad$yhat[i:(i+67)]-gbm_hedonic_index_lad$yhat[i])*100
 }
 gbm_hedonic_index_lad = gbm_hedonic_index_lad[,-3]
-write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_lga.csv")
+write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_lga_quarterly.csv")
 ```
 
 
