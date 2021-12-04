@@ -484,7 +484,7 @@ write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_lga_monthly.csv")
 #gbm pdp index
 ```{r}
 la_desc = data.frame(table(resale$LA_DESC))
-gbm_hedonic_index_impute = data.frame(month = 1:6120, rate = 1, index = 100)
+gbm_hedonic_index_impute = data.frame(month = 1:6120, rate = 1, LA_DESC = "", index = 100)
 
 n=1
 #traditional method
@@ -492,21 +492,38 @@ for (i in la_desc[,1]) {
   temp_hedonic = model_train_hedonic[which(model_train_hedonic$LA_DESC == i),]
   for (j in 1:203){
     temp_pi = temp_hedonic[which(temp_hedonic$month_num == j+1),]
-    temp_pi$month_num = j
-    prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
-    pi = exp(mean(temp_pi$logprice - prediction_pi))
+    if(nrow(temp_pi) == 0){
+      pi = 0
+    }
+    else{
+      temp_pi$month_num = j
+      prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
+      pi = exp(mean(temp_pi$logprice - prediction_pi))
+    }
     #print(pi)
   
     temp_li = temp_hedonic[which(temp_hedonic$month_num == j),]
-    temp_li$month_num = j+1
-    prediction_li = predict(gbm_full, temp_li, n.trees = 2000)
-    li = exp(mean(prediction_li - temp_li$logprice))
+    
+    if(nrow(temp_li) == 0){
+      li = 0
+    }
+    else{
+      temp_li$month_num = j+1
+      prediction_li = predict(gbm_full, temp_li, n.trees = 2000)
+      li = exp(mean(prediction_li - temp_li$logprice))
+    }
     #print(li)
-  
-    gbm_hedonic_index_impute$rate[(n-1)*204+j+1] = sqrt(pi*li)
-    gbm_hedonic_index_impute$index[(n-1)*204+j+1] = prod(gbm_hedonic_index_impute$rate[((n-1)*204+1):((n-1)*204+j+1)])*100
+    
+    if(pi == 0 | li == 0){
+      gbm_hedonic_index_impute$index[(n-1)*204+j+1] = NA
+    }
+    else{
+      gbm_hedonic_index_impute$rate[(n-1)*204+j+1] = sqrt(pi*li)
+      gbm_hedonic_index_impute$index[(n-1)*204+j+1] = gbm_hedonic_index_impute$rate[(n-1)*204+j+1]*100#prod(gbm_hedonic_index_impute$rate[((n-1)*204+1):((n-1)*204+j+1)])*100
+    }
     print(j)
   }
+  gbm_hedonic_index_impute$LA_DESC[((n-1)*204+1):((n-1)*204+204)] = i
   n=n+1
   print(i)
 }
