@@ -110,7 +110,7 @@ save.image("./full_period_index_quarterly.RData")
 
 
 #global accuracy
-#simply construct rppi, reference period is financial year 2011-2012
+#simply construct rppi, reference period is financial year 2004
 ```{r}
 #pdp_quarters
 #ls

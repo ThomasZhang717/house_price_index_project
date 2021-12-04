@@ -32,12 +32,18 @@ model_train_hedonic$logprice = log(model_train_hedonic$SALE1)
 ```
 
 
-#add month dummy
+#add month (train & test)
 ```{r}
 model_train_hedonic$month = month(model_train_hedonic$DATE1)
 model_train_hedonic$month_num = 0
 for (i in 2004:2020) {
   model_train_hedonic$month_num[which(model_train_hedonic$year_sale == i)] = model_train_hedonic$month[which(model_train_hedonic$year_sale == i)] + (i - 2004) * 12
+}
+
+model_test$month = month(model_test$DATE1)
+model_test$month_num = 0
+for (i in 2004:2020) {
+  model_test$month_num[which(model_test$year_sale == i)] = model_test$month[which(model_test$year_sale == i)] + (i - 2004) * 12
 }
 ```
 
@@ -121,7 +127,7 @@ save.image("./full_period_index_monthly.RData")
 
 
 #global accuracy
-#simply construct rppi, reference period is financial year 2011-2012
+#simply construct rppi, reference period is financial year 2004
 ```{r}
 #pdp_months
 #ls
@@ -249,6 +255,12 @@ write.csv(resale_index, "./data/resale_index_monthly.csv")
 resale_test = model_resale %>%
   filter(model_resale$resale_freq > 2)
 
+resale_test$month = month(resale_test$DATE1)
+resale_test$month_num = 0
+for (i in 2004:2020) {
+  resale_test$month_num[which(resale_test$year_sale == i)] = resale_test$month[which(resale_test$year_sale == i)] + (i - 2004) * 12
+}
+
 resale_test$resale_indexed_sale = 0
 resale_test$gbm_hedonic_indexed_sale = 0
 resale_test$gbm_hedonic_indexed_sale_lad = 0
@@ -342,6 +354,12 @@ median(abs(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_lad
 ```{r}
 resale_test = model_resale %>%
   filter(model_resale$resale_freq > 2)
+
+resale_test$month = month(resale_test$DATE1)
+resale_test$month_num = 0
+for (i in 2004:2020) {
+  resale_test$month_num[which(resale_test$year_sale == i)] = resale_test$month[which(resale_test$year_sale == i)] + (i - 2004) * 12
+}
 
 resale_test$resale_indexed_sale = 0
 resale_test$gbm_hedonic_indexed_sale = 0
