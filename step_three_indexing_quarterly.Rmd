@@ -125,19 +125,19 @@ gbm_hedonic_index_impute = data.frame(quarter = 1:68, rate = 1, index = 100)
 #traditional method
 for (i in 1:67){
   temp_pi = model_train_hedonic[which(model_train_hedonic$quarter_num == i+1),]
-  temp_pi$quarter_num = i
+  temp_pi$quarter_num = 1
   prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
   pi = exp(mean(temp_pi$logprice - prediction_pi))
   #print(pi)
   
-  temp_li = model_train_hedonic[which(model_train_hedonic$quarter_num == i),]
+  temp_li = model_train_hedonic[which(model_train_hedonic$quarter_num == 1),]
   temp_li$quarter_num = i+1
   prediction_li = predict(gbm_full, temp_li, n.trees = 2000)
   li = exp(mean(prediction_li - temp_li$logprice))
   #print(li)
   
   gbm_hedonic_index_impute$rate[i+1] = sqrt(pi*li)
-  gbm_hedonic_index_impute$index[i+1] = prod(gbm_hedonic_index_impute$rate[1:(i+1)])*100
+  gbm_hedonic_index_impute$index[i+1] = gbm_hedonic_index_impute$rate[i+1]*100#prod(gbm_hedonic_index_impute$rate[1:(i+1)])*100
   print(i)
 }
 gbm_hedonic_index_impute = gbm_hedonic_index_impute[,-2]
@@ -476,6 +476,40 @@ for (i in seq(1,2040,68)) {
 }
 gbm_hedonic_index_lad = gbm_hedonic_index_lad[,-3]
 write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_lga_quarterly.csv")
+```
+
+
+#gbm pdp index
+```{r}
+la_desc = data.frame(table(resale$LA_DESC))
+gbm_hedonic_index_impute = data.frame(quarter = 1:2040, rate = 1, index = 100)
+
+n=1
+#traditional method
+for (i in la_desc[,1]) {
+  temp_hedonic = model_train_hedonic[which(model_train_hedonic$LA_DESC == i),]
+  for (j in 1:67){
+    temp_pi = temp_hedonic[which(temp_hedonic$quarter_num == j+1),]
+    temp_pi$quarter_num = 1
+    prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
+    pi = exp(mean(temp_pi$logprice - prediction_pi))
+    #print(pi)
+  
+    temp_li = temp_hedonic[which(temp_hedonic$quarter_num == 1),]
+    temp_li$quarter_num = j+1
+    prediction_li = predict(gbm_full, temp_li, n.trees = 2000)
+    li = exp(mean(prediction_li - temp_li$logprice))
+    #print(li)
+  
+    gbm_hedonic_index_impute$rate[(n-1)*68+j+1] = sqrt(pi*li)
+    gbm_hedonic_index_impute$index[(n-1)*68+j+1] = gbm_hedonic_index_impute$rate[(n-1)*68+j+1]*100#prod(gbm_hedonic_index_impute$rate[((n-1)*68+1):((n-1)*68+j+1)])*100
+    print(j)
+  }
+  n=n+1
+  print(i)
+}
+gbm_hedonic_index_impute = gbm_hedonic_index_impute[,-2]
+write.csv(gbm_hedonic_index_impute, "./data/gbm_hedonic_index_impute_lga_quarterly.csv")
 ```
 
 
