@@ -17,6 +17,7 @@ library(doParallel)
 library(foreach)
 library(ggplot2)
 library(caret)
+library(iml)
 ```
 
 
@@ -136,6 +137,16 @@ save.image("./full_period_index_monthly.RData")
 #lad
 gbm_hedonic_index_lad = data.frame(month = 1:204, index = exp(pdp_months$yhat - pdp_months$yhat[1]) * 100)
 write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_monthly.csv")
+
+
+#alt
+#I could use Accumulated local effect rather than pdp, because it is faster and unbiased.
+alt = Predictor$new(gbm_full, data = model) # this dataset need to use "model" in line 55, chunk 4.
+alt_month = FeatureEffect$new(alt, feature = "month_num", grid.size = 300) # the `grid.size` is quite important, because it controls the outputs. I have 204 months in the data, then I have to change the grid.size to 204 (change it more to 300 for making sure, I can get 204 months), default is 20.
+temp = data.frame(alt_month$results)
+gbm_hedonic_index_alt = data.frame(month = 1:204, index = 0)
+gbm_hedonic_index_alt$index = exp(temp$.value)/exp(temp$.value[1])*100
+write.csv(gbm_hedonic_index_alt, "./data/gbm_hedonic_index_alt_monthly.csv")
 
 
 gbm_hedonic_index_impute = data.frame(month = 1:204, rate = 1, index = 100)
@@ -264,6 +275,7 @@ for (i in 2004:2020) {
 resale_test$resale_indexed_sale = 0
 resale_test$gbm_hedonic_indexed_sale = 0
 resale_test$gbm_hedonic_indexed_sale_lad = 0
+resale_test$gbm_hedonic_indexed_sale_alt = 0
 
 #forward predict
 for (i in 1:(nrow(resale_test)-1)) {
@@ -272,6 +284,7 @@ for (i in 1:(nrow(resale_test)-1)) {
       resale_test$resale_indexed_sale[i+1] = resale_test$SALE1[i] / resale_index$index[which(resale_index$month == resale_test$month_num[i])] * resale_index$index[which(resale_index$month == resale_test$month_num[i+1])]
       resale_test$gbm_hedonic_indexed_sale[i+1] = resale_test$SALE1[i] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+1])]
       resale_test$gbm_hedonic_indexed_sale_lad[i+1] = resale_test$SALE1[i] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+1])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i+1] = resale_test$SALE1[i] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+1])]
     }
   }
   print(i)
@@ -282,6 +295,7 @@ for (i in 1:(nrow(resale_test)-2)) {
       resale_test$resale_indexed_sale[i+2] = resale_test$SALE1[i] / resale_index$index[which(resale_index$month == resale_test$month_num[i])] * resale_index$index[which(resale_index$month == resale_test$month_num[i+2])]
       resale_test$gbm_hedonic_indexed_sale[i+2] = resale_test$SALE1[i] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+2])]
       resale_test$gbm_hedonic_indexed_sale_lad[i+2] = resale_test$SALE1[i] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+2])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i+2] = resale_test$SALE1[i] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+2])]
     }
   }
   print(i)
@@ -292,6 +306,7 @@ for (i in 1:(nrow(resale_test)-3)) {
       resale_test$resale_indexed_sale[i+3] = resale_test$SALE1[i] / resale_index$index[which(resale_index$month == resale_test$month_num[i])] * resale_index$index[which(resale_index$month == resale_test$month_num[i+3])]
       resale_test$gbm_hedonic_indexed_sale[i+3] = resale_test$SALE1[i] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+3])]
       resale_test$gbm_hedonic_indexed_sale_lad[i+3] = resale_test$SALE1[i] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+3])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i+3] = resale_test$SALE1[i] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+3])]
     }
   }
   print(i)
@@ -302,6 +317,7 @@ for (i in 1:(nrow(resale_test)-4)) {
       resale_test$resale_indexed_sale[i+4] = resale_test$SALE1[i] / resale_index$index[which(resale_index$month == resale_test$month_num[i])] * resale_index$index[which(resale_index$month == resale_test$month_num[i+4])]
       resale_test$gbm_hedonic_indexed_sale[i+4] = resale_test$SALE1[i] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+4])]
       resale_test$gbm_hedonic_indexed_sale_lad[i+4] = resale_test$SALE1[i] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+4])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i+4] = resale_test$SALE1[i] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+4])]
     }
   }
   print(i)
@@ -312,6 +328,7 @@ for (i in 1:(nrow(resale_test)-5)) {
       resale_test$resale_indexed_sale[i+5] = resale_test$SALE1[i] / resale_index$index[which(resale_index$month == resale_test$month_num[i])] * resale_index$index[which(resale_index$month == resale_test$month_num[i+5])]
       resale_test$gbm_hedonic_indexed_sale[i+5] = resale_test$SALE1[i] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+5])]
       resale_test$gbm_hedonic_indexed_sale_lad[i+5] = resale_test$SALE1[i] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+5])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i+5] = resale_test$SALE1[i] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+5])]
     }
   }
   print(i)
@@ -322,6 +339,7 @@ for (i in 1:(nrow(resale_test)-6)) {
       resale_test$resale_indexed_sale[i+6] = resale_test$SALE1[i] / resale_index$index[which(resale_index$month == resale_test$month_num[i])] * resale_index$index[which(resale_index$month == resale_test$month_num[i+6])]
       resale_test$gbm_hedonic_indexed_sale[i+6] = resale_test$SALE1[i] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+6])]
       resale_test$gbm_hedonic_indexed_sale_lad[i+6] = resale_test$SALE1[i] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+6])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i+6] = resale_test$SALE1[i] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+6])]
     }
   }
   print(i)
@@ -340,6 +358,8 @@ RMSE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale))
 median(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale))
 RMSE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale_lad))
 median(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_lad))
+RMSE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale_alt))
+median(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_alt))
 
 MAE(log(resale_test$SALE1), log(resale_test$resale_indexed_sale))
 median(abs(log(resale_test$SALE1) - log(resale_test$resale_indexed_sale)))
@@ -347,6 +367,8 @@ MAE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale))
 median(abs(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale)))
 MAE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale_lad))
 median(abs(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_lad)))
+MAE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale_alt))
+median(abs(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_alt)))
 ```
 
 
@@ -364,6 +386,7 @@ for (i in 2004:2020) {
 resale_test$resale_indexed_sale = 0
 resale_test$gbm_hedonic_indexed_sale = 0
 resale_test$gbm_hedonic_indexed_sale_lad = 0
+resale_test$gbm_hedonic_indexed_sale_alt = 0
 
 #backward predict
 for (i in 1:(nrow(resale_test)-1)) {
@@ -372,6 +395,7 @@ for (i in 1:(nrow(resale_test)-1)) {
       resale_test$resale_indexed_sale[i] = resale_test$SALE1[i+1] / resale_index$index[which(resale_index$month == resale_test$month_num[i+1])] * resale_index$index[which(resale_index$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale[i] = resale_test$SALE1[i+1] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+1])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale_lad[i] = resale_test$SALE1[i+1] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+1])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i] = resale_test$SALE1[i+1] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+1])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])]
     }
   }
   print(i)
@@ -382,6 +406,7 @@ for (i in 1:(nrow(resale_test)-2)) {
       resale_test$resale_indexed_sale[i] = resale_test$SALE1[i+2] / resale_index$index[which(resale_index$month == resale_test$month_num[i+2])] * resale_index$index[which(resale_index$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale[i] = resale_test$SALE1[i+2] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+2])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale_lad[i] = resale_test$SALE1[i+2] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+2])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i] = resale_test$SALE1[i+2] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+2])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])]
     }
   }
   print(i)
@@ -392,6 +417,7 @@ for (i in 1:(nrow(resale_test)-3)) {
       resale_test$resale_indexed_sale[i] = resale_test$SALE1[i+3] / resale_index$index[which(resale_index$month == resale_test$month_num[i+3])] * resale_index$index[which(resale_index$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale[i] = resale_test$SALE1[i+3] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+3])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale_lad[i] = resale_test$SALE1[i+3] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+3])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i] = resale_test$SALE1[i+3] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+3])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])]
     }
   }
   print(i)
@@ -402,6 +428,7 @@ for (i in 1:(nrow(resale_test)-4)) {
       resale_test$resale_indexed_sale[i] = resale_test$SALE1[i+4] / resale_index$index[which(resale_index$month == resale_test$month_num[i+4])] * resale_index$index[which(resale_index$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale[i] = resale_test$SALE1[i+4] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+4])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale_lad[i] = resale_test$SALE1[i+4] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+4])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i] = resale_test$SALE1[i+4] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+4])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])]
     }
   }
   print(i)
@@ -412,6 +439,7 @@ for (i in 1:(nrow(resale_test)-5)) {
       resale_test$resale_indexed_sale[i] = resale_test$SALE1[i+5] / resale_index$index[which(resale_index$month == resale_test$month_num[i+5])] * resale_index$index[which(resale_index$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale[i] = resale_test$SALE1[i+5] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+5])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale_lad[i] = resale_test$SALE1[i+5] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+5])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i] = resale_test$SALE1[i+5] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+5])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])]
     }
   }
   print(i)
@@ -422,6 +450,7 @@ for (i in 1:(nrow(resale_test)-6)) {
       resale_test$resale_indexed_sale[i] = resale_test$SALE1[i+6] / resale_index$index[which(resale_index$month == resale_test$month_num[i+6])] * resale_index$index[which(resale_index$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale[i] = resale_test$SALE1[i+6] / gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i+6])] * gbm_hedonic_index_impute$index[which(gbm_hedonic_index_impute$month == resale_test$month_num[i])]
       resale_test$gbm_hedonic_indexed_sale_lad[i] = resale_test$SALE1[i+6] / gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i+6])] * gbm_hedonic_index_lad$index[which(gbm_hedonic_index_lad$month == resale_test$month_num[i])]
+      resale_test$gbm_hedonic_indexed_sale_alt[i] = resale_test$SALE1[i+6] / gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i+6])] * gbm_hedonic_index_alt$index[which(gbm_hedonic_index_alt$month == resale_test$month_num[i])]
     }
   }
   print(i)
@@ -439,6 +468,8 @@ RMSE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale))
 median(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale))
 RMSE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale_lad))
 median(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_lad))
+RMSE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale_alt))
+median(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_alt))
 
 MAE(log(resale_test$SALE1), log(resale_test$resale_indexed_sale))
 median(abs(log(resale_test$SALE1) - log(resale_test$resale_indexed_sale)))
@@ -446,6 +477,8 @@ MAE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale))
 median(abs(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale)))
 MAE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale_lad))
 median(abs(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_lad)))
+MAE(log(resale_test$SALE1), log(resale_test$gbm_hedonic_indexed_sale_alt))
+median(abs(log(resale_test$SALE1) - log(resale_test$gbm_hedonic_indexed_sale_alt)))
 ```
 
 
