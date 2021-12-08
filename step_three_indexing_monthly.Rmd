@@ -496,13 +496,13 @@ for (i in la_desc[,1]) {
       pi = 0
     }
     else{
-      temp_pi$month_num = j
+      temp_pi$month_num = 1
       prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
       pi = exp(mean(temp_pi$logprice - prediction_pi))
     }
     #print(pi)
   
-    temp_li = temp_hedonic[which(temp_hedonic$month_num == j),]
+    temp_li = temp_hedonic[which(temp_hedonic$month_num == 1),]
     
     if(nrow(temp_li) == 0){
       li = 0
@@ -645,7 +645,7 @@ resale_test = resale_test %>%
   filter(resale_test$train_test == "test")
 
 resale_test = resale_test %>%
-  filter(resale_test$resale_indexed_sale > 0 | resale_test$gbm_hedonic_indexed_sale_lad > 0)#resale index could have some NA value, which can not predict. could use & to get the results 
+  filter(resale_test$resale_indexed_sale > 0 & resale_test$gbm_hedonic_indexed_sale_lad > 0 & resale_test$gbm_hedonic_indexed_sale > 0)#resale index could have some NA value, which can not predict. could use & to get the results 
 
 RMSE(log(resale_test$SALE1), log(resale_test$resale_indexed_sale))
 median(log(resale_test$SALE1) - log(resale_test$resale_indexed_sale))
