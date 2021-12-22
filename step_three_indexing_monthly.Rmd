@@ -153,15 +153,17 @@ gbm_hedonic_index_impute = data.frame(month = 1:204, rate = 1, index = 100)
 #traditional method
 for (i in 1:203){
   temp_pi = model_train_hedonic[which(model_train_hedonic$month_num == i+1),]
+  prediction_pi_t = predict(gbm_full, temp_pi, n.trees = 2000)
   temp_pi$month_num = 1
   prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
-  pi = exp(mean(temp_pi$logprice - prediction_pi))
+  pi = exp(mean(prediction_pi_t - prediction_pi))
   #print(pi)
   
   temp_li = model_train_hedonic[which(model_train_hedonic$month_num == 1),]
-  temp_li$month_num = i+1
   prediction_li = predict(gbm_full, temp_li, n.trees = 2000)
-  li = exp(mean(prediction_li - temp_li$logprice))
+  temp_li$month_num = i+1
+  prediction_li_t = predict(gbm_full, temp_li, n.trees = 2000)
+  li = exp(mean(prediction_li_t - prediction_li))
   #print(li)
   
   gbm_hedonic_index_impute$rate[i+1] = sqrt(pi*li)
