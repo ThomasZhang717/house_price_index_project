@@ -21,6 +21,7 @@ library(iml)
 ```
 
 
+
 #hedonic indexing
 #import data (if use train_test_split_backup, no need to run this)
 ```{r}
@@ -31,6 +32,7 @@ model_train_hedonic$PROP_CLA = as.factor(model_train_hedonic$PROP_CLA)
 model_train_hedonic$submarket = as.factor(model_train_hedonic$submarket)
 model_train_hedonic$logprice = log(model_train_hedonic$SALE1)
 ```
+
 
 
 #prepare data for modeling
@@ -118,7 +120,7 @@ for(i in 1:68){
   
   #model in window
   set.seed(717)
-  gbm_window = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT, data = model_window, distribution = "laplace", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
+  gbm_window = gbm(logprice ~ LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT, data = model_window, distribution = "laplace", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
   
   #save model
   assign(paste0("gbm_cross_section_window_",i), gbm_window)
@@ -510,4 +512,13 @@ pdp_window = partial(object = gbm_window,
                      pred.var = "quarter_num",
                      n.trees = 2000,
                      pred.grid = data.frame(quarter_num = min(model_window$quarter_num):max(model_window$quarter_num)))
+
+
+#pdp_quarters
+#ls
+#gbm_hedonic_index = data.frame(quarter = 1:68, index = exp(pdp_quarters$yhat - pdp_quarters$yhat[1]) * 100)
+#write.csv(gbm_hedonic_index, "./data/gbm_hedonic_index.csv")
+#lad
+gbm_hedonic_index_lad = data.frame(quarter = 1:68, index = exp(pdp_quarters$yhat - pdp_quarters$yhat[1]) * 100)
+write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_quarterly.csv")
 ```

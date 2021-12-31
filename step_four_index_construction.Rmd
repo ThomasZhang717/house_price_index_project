@@ -5,60 +5,216 @@ date: "31/12/2021"
 output: html_document
 ---
 
+
 #libraries
 ```{r}
 library(foreign)
 library(dplyr)
 library(lubridate)
+library(gbm)
+library(pdp)
+library(doParallel)
+library(foreach)
 library(ggplot2)
 library(caret)
 library(iml)
 ```
 
 
-#global accuracy
-#simply construct rppi, reference period is financial year 2004
+
+#global
+#construct rppi, reference period is year 2004 Q1
+#full period
 ```{r}
-#pdp_quarters
-#ls
-#gbm_hedonic_index = data.frame(quarter = 1:68, index = exp(pdp_quarters$yhat - pdp_quarters$yhat[1]) * 100)
-#write.csv(gbm_hedonic_index, "./data/gbm_hedonic_index.csv")
-#lad
-gbm_hedonic_index_lad = data.frame(quarter = 1:68, index = exp(pdp_quarters$yhat - pdp_quarters$yhat[1]) * 100)
-write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_quarterly.csv")
-
-
+load("./full_period_index_lad_quarterly.RData")
 #alt
 #I could use Accumulated local effect rather than pdp, because it is faster and unbiased.
 alt = Predictor$new(gbm_full, data = model) # this dataset need to use "model" in line 55, chunk 4.
 alt_quarter = FeatureEffect$new(alt, feature = "quarter_num", grid.size = 100) # the `grid.size` is quite important, because it controls the outputs. I have 68 quarters in the data, then I have to change the grid.size to 68 (change it more to 100 for making sure, I can get 68 quarters), default is 20.
 temp = data.frame(alt_quarter$results)
-gbm_hedonic_index_alt = data.frame(quarter = 1:68, index = 0)
-gbm_hedonic_index_alt$index = exp(temp$.value)/exp(temp$.value[1])*100
-write.csv(gbm_hedonic_index_alt, "./data/gbm_hedonic_index_alt_quarterly.csv")
+mlf_index_alt = data.frame(quarter = 1:68, index = 0)
+mlf_index_alt$index = exp(temp$.value)/exp(temp$.value[1])*100
+#save index
+write.csv(mlf_index_alt, "./data/mlf_index_alt_quarterly.csv")
+```
 
 
-gbm_hedonic_index_impute = data.frame(quarter = 1:68, rate = 1, index = 100)
+
+#rolling windows
+```{r}
+#load data
+load("./rolling_window_index_lad_quarterly.RData")
+
+model_train_hedonic = read.csv("./data/raw_data_2004_2020_RPPI_hedonic_train.csv")[-1]
+
+model_train_hedonic$LA_DESC = as.factor(model_train_hedonic$LA_DESC)
+model_train_hedonic$PROP_CLA = as.factor(model_train_hedonic$PROP_CLA)
+model_train_hedonic$submarket = as.factor(model_train_hedonic$submarket)
+model_train_hedonic$logprice = log(model_train_hedonic$SALE1)
+
+model = data.frame(logprice = model_train_hedonic$logprice,
+                   quarter_num = model_train_hedonic$quarter_num, 
+                   LAND_ARE = model_train_hedonic$LAND_ARE, 
+                   AREA_HSE = model_train_hedonic$AREA_HSE, 
+                   age = model_train_hedonic$age, 
+                   BEDS = model_train_hedonic$BEDS,
+                   BATHS = model_train_hedonic$BATHS, 
+                   DINING = model_train_hedonic$DINING, 
+                   KITCHEN = model_train_hedonic$KITCHEN, 
+                   FAMILY = model_train_hedonic$FAMILY, 
+                   STUDY = model_train_hedonic$STUDY, 
+                   GAMES = model_train_hedonic$GAMES, 
+                   LOUNGE = model_train_hedonic$LOUNGE, 
+                   MEALS = model_train_hedonic$MEALS, 
+                   carpark = model_train_hedonic$carpark, 
+                   LA_DESC = model_train_hedonic$LA_DESC, 
+                   PROP_CLA = model_train_hedonic$PROP_CLA, 
+                   centlong = model_train_hedonic$centlong, 
+                   centlat = model_train_hedonic$centlat, 
+                   TENCRT = model_train_hedonic$TENCRT,
+                   d_pool = model_train_hedonic$d_pool, 
+                   d_brick = model_train_hedonic$d_brick, 
+                   d_tile = model_train_hedonic$d_tile)
+
+#prepare windows for rolling process
+for (i in 1:61) {
+  temp_train = model[which(model$quarter_num <= (7+i) & model$quarter_num >= i),]
+  
+  assign(paste0("train_window_", i), temp_train)
+}
+
+
+#alt
+#I could use Accumulated local effect rather than pdp, because it is faster and unbiased.
+for (i in 1:61){
+  temp_gbm = get(paste0("gbm_rolling_window_", i))
+  temp_model = get(paste0("train_window_",i))
+  alt = Predictor$new(temp_gbm, data = temp_model) # this dataset need to use "model" in line 55, chunk 4.
+  alt_quarter = FeatureEffect$new(alt, feature = "quarter_num", grid.size = 20) # the `grid.size` is quite important, because it controls the outputs. I have 68 quarters in the data, then I have to change the grid.size to 68 (change it more to 100 for making sure, I can get 68 quarters), default is 20.
+  temp = data.frame(alt_quarter$results)
+  temp_mlr_index_alt = data.frame(quarter = i:(i+7), index = 0)
+  temp_mlr_index_alt$index = exp(temp$.value)/exp(temp$.value[1])*100
+  
+  assign(paste0("mlr_index_alt_window_",i), temp_mlr_index_alt)
+}
+
+
+mlr_index_alt = data.frame(quarter = 1:68, index = 0)
+mlr_index_alt$index[1:8] = mlr_index_alt_window_1$index
+#chain the index
+for (i in 2:61) {
+  temp_mlr_index_alt = get(paste0("mlr_index_alt_window_",i))
+  temp = temp_mlr_index_alt$index[8]/temp_mlr_index_alt$index[7]
+  mlr_index_alt$index[i+7] = mlr_index_alt$index[i+6]*temp
+}
+#save index
+write.csv(mlr_index_alt, "./data/mlr_index_alt_quarterly.csv")
+```
+
+
+
+#hedonic impute (cross section)
+```{r}
+#load data
+load("./cross_section_window_index_lad_quarterly.RData")
+
+model_train_hedonic = read.csv("./data/raw_data_2004_2020_RPPI_hedonic_train.csv")[-1]
+
+model_train_hedonic$LA_DESC = as.factor(model_train_hedonic$LA_DESC)
+model_train_hedonic$PROP_CLA = as.factor(model_train_hedonic$PROP_CLA)
+model_train_hedonic$submarket = as.factor(model_train_hedonic$submarket)
+model_train_hedonic$logprice = log(model_train_hedonic$SALE1)
+
+model = data.frame(logprice = model_train_hedonic$logprice,
+                   quarter_num = model_train_hedonic$quarter_num, 
+                   LAND_ARE = model_train_hedonic$LAND_ARE, 
+                   AREA_HSE = model_train_hedonic$AREA_HSE, 
+                   age = model_train_hedonic$age, 
+                   BEDS = model_train_hedonic$BEDS,
+                   BATHS = model_train_hedonic$BATHS, 
+                   DINING = model_train_hedonic$DINING, 
+                   KITCHEN = model_train_hedonic$KITCHEN, 
+                   FAMILY = model_train_hedonic$FAMILY, 
+                   STUDY = model_train_hedonic$STUDY, 
+                   GAMES = model_train_hedonic$GAMES, 
+                   LOUNGE = model_train_hedonic$LOUNGE, 
+                   MEALS = model_train_hedonic$MEALS, 
+                   carpark = model_train_hedonic$carpark, 
+                   LA_DESC = model_train_hedonic$LA_DESC, 
+                   PROP_CLA = model_train_hedonic$PROP_CLA, 
+                   centlong = model_train_hedonic$centlong, 
+                   centlat = model_train_hedonic$centlat, 
+                   TENCRT = model_train_hedonic$TENCRT,
+                   d_pool = model_train_hedonic$d_pool, 
+                   d_brick = model_train_hedonic$d_brick, 
+                   d_tile = model_train_hedonic$d_tile)
+
+#prepare windows for rolling process
+for (i in 1:68) {
+  temp_train = model[which(model$quarter_num == i),]
+  
+  assign(paste0("train_window_", i), temp_train)
+}
+
+
+#1t
+dit_index_impute = data.frame(quarter = 1:68, rate = 1, index = 100)
 #traditional method
-for (i in 1:67){
-  temp_pi = model_train_hedonic[which(model_train_hedonic$quarter_num == i+1),]
-  prediction_pi_t = predict(gbm_full, temp_pi, n.trees = 2000)
+for (i in 2:68){
+  temp_pi = get(paste0("train_window_", i))
+  temp_gbm = get(paste0("gbm_cross_section_window_", i))
+  prediction_pi_t = predict(temp_gbm, temp_pi, n.trees = 2000)
   temp_pi$quarter_num = 1
-  prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
+  temp_gbm = get(paste0("gbm_cross_section_window_", 1))
+  prediction_pi = predict(temp_gbm, temp_pi, n.trees = 2000)
   pi = exp(mean(prediction_pi_t - prediction_pi))
   #print(pi)
   
-  temp_li = model_train_hedonic[which(model_train_hedonic$quarter_num == 1),]
-  prediction_li = predict(gbm_full, temp_li, n.trees = 2000)
-  temp_li$quarter_num = i+1
-  prediction_li_t = predict(gbm_full, temp_li, n.trees = 2000)
+  temp_li = get(paste0("train_window_", 1))
+  temp_gbm = get(paste0("gbm_cross_section_window_", 1))
+  prediction_li = predict(temp_gbm, temp_li, n.trees = 2000)
+  temp_li$quarter_num = i
+  temp_gbm = get(paste0("gbm_cross_section_window_", i))
+  prediction_li_t = predict(temp_gbm, temp_li, n.trees = 2000)
   li = exp(mean(prediction_li_t - prediction_li))
   #print(li)
   
-  gbm_hedonic_index_impute$rate[i+1] = sqrt(pi*li)
-  gbm_hedonic_index_impute$index[i+1] = gbm_hedonic_index_impute$rate[i+1]*100#prod(gbm_hedonic_index_impute$rate[1:(i+1)])*100
+  dit_index_impute$rate[i] = sqrt(pi*li)
+  dit_index_impute$index[i] = dit_index_impute$rate[i]*100#prod(gbm_hedonic_index_impute$rate[1:(i+1)])*100
   print(i)
 }
-gbm_hedonic_index_impute = gbm_hedonic_index_impute[,-2]
-write.csv(gbm_hedonic_index_impute, "./data/gbm_hedonic_index_impute_quarterly.csv")
+#save index
+write.csv(dit_index_impute, "./data/dit_index_impute_1t_quarterly.csv")
+
+
+#chained
+dit_index_impute_chained = data.frame(quarter = 1:68, rate = 1, index = 100)
+#traditional method
+for (i in 2:68){
+  temp_pi = get(paste0("train_window_", i))
+  temp_gbm = get(paste0("gbm_cross_section_window_", i))
+  prediction_pi_t = predict(temp_gbm, temp_pi, n.trees = 2000)
+  temp_pi$quarter_num = i-1
+  temp_gbm = get(paste0("gbm_cross_section_window_", i-1))
+  prediction_pi = predict(temp_gbm, temp_pi, n.trees = 2000)
+  pi = exp(mean(prediction_pi_t - prediction_pi))
+  #print(pi)
+  
+  temp_li = get(paste0("train_window_", i-1))
+  temp_gbm = get(paste0("gbm_cross_section_window_", i-1))
+  prediction_li = predict(temp_gbm, temp_li, n.trees = 2000)
+  temp_li$quarter_num = i
+  temp_gbm = get(paste0("gbm_cross_section_window_", i))
+  prediction_li_t = predict(temp_gbm, temp_li, n.trees = 2000)
+  li = exp(mean(prediction_li_t - prediction_li))
+  #print(li)
+  
+  dit_index_impute_chained$rate[i] = sqrt(pi*li)
+  dit_index_impute_chained$index[i] = prod(dit_index_impute_chained$rate[1:(i)])*100
+  print(i)
+}
+write.csv(dit_index_impute_chained, "./data/dit_index_impute_chained_quarterly.csv")
 ```
+
+
+

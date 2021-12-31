@@ -10,8 +10,13 @@ output: html_document
 library(foreign)
 library(dplyr)
 library(lubridate)
+library(gbm)
+library(pdp)
+library(doParallel)
+library(foreach)
 library(ggplot2)
 library(caret)
+library(iml)
 ```
 
 
