@@ -1,0 +1,17 @@
+---
+title: "index_construction"
+author: "Zhuoran"
+date: "31/12/2021"
+output: html_document
+---
+
+#libraries
+```{r}
+library(foreign)
+library(dplyr)
+library(lubridate)
+library(gbm)
+library(ggplot2)
+library(caret)
+library(iml)
+```

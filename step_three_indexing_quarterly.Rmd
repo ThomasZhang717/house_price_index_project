@@ -198,6 +198,33 @@ save.image("./rolling_window_index_quarterly.RData")
 
 
 
+#hedonic indexing cross sectional
+```{r}
+#prepare windows for rolling process
+for (i in 1:68) {
+  temp_train = model[which(model$quarter_num == i),]
+  
+  assign(paste0("train_window_", i), temp_train)
+}
+
+
+for(i in 1:68){
+  model_window = get(paste0("train_window_",i))
+  
+  #model in window
+  set.seed(717)
+  gbm_window = gbm(logprice ~ quarter_num + LAND_ARE + AREA_HSE + age + BEDS + BATHS + DINING + KITCHEN + FAMILY + STUDY + GAMES + LOUNGE + MEALS + carpark + LA_DESC + PROP_CLA + centlong + centlat + d_pool + d_brick + d_tile + TENCRT, data = model_window, distribution = "gaussian", n.trees = 2000, interaction.depth = 14, shrinkage = 0.05, n.minobsinnode = 15, bag.fraction = 0.5)
+  
+  #save model
+  assign(paste0("gbm_cross_section_window_",i), gbm_window)
+  
+  print(paste0("window ",i," is done."))
+}
+
+save.image("./cross_section_window_index.RData")
+```
+
+
 
 
 
