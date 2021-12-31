@@ -153,6 +153,9 @@ resale$quarter = quarter(resale$date)
 resale$quarter_pre = quarter(resale$date_pre)
 resale$quarter_num = (resale$year - 2004) * 4 + resale$quarter
 resale$quarter_num_pre = (resale$year_pre - 2004) * 4 + resale$quarter_pre
+#save resale data
+#write.csv(resale, "./data/raw_data_2004_2020_RPPI_repeatsales_train_prepared.csv")
+
 
 model = data.frame(log_diff = log(resale$sale) - log(resale$sale_pre), quarter = resale$quarter_num, quarter_pre = resale$quarter_num_pre, quarter_1 = 0, quarter_2 = 0)
 model = fastDummies::dummy_cols(model, select_columns = c("quarter"))
@@ -165,13 +168,20 @@ model = model[,-c(2,3,4)]
 
 #resale index: case-shiller index
 ```{r}
+#step 1: BMN index
 lm_resale = lm(log_diff ~ . - 1, data = model)
+#step 2: residual and interval
+temp_cs = data.frame(sq_r = (lm_resale$residuals)^2, time_interval = resale$quarter_num - resale$quarter_num_pre)
+lm_weights = lm(sq_r ~ time_interval, data = temp_cs)
+glm_weights = sqrt(lm_weights$fitted.values)
+#step 3: case-shiller index
+glm_resale = glm(log_diff ~ . -1, data = model, weights = glm_weights)
 #index
 resale_index = data.frame(quarter = 1:68)
-resale_index$index = exp(c(0, lm_resale$coefficients))
+resale_index$index = exp(c(0, glm_resale$coefficients))
 resale_index$index = resale_index$index * 100
 
-write.csv(resale_index, "./data/resale_index_quarterly.csv")
+write.csv(resale_index, "./data/resale_index_cassehiller_quarterly.csv")
 ```
 
 
