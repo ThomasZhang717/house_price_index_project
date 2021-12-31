@@ -14,12 +14,12 @@ Working Process
     - [x] Cross section strategy (chained index).
     - [x] Resales strategy (Case-Shiller).
   - [x] Global Index construction.
-    - [x] ML method(ALE).
+    - [x] ML method (ALE).
     - [x] Imputation method (T index).
     - [x] Repeat sales method.
   - [x] Global Index quality test.
   - [ ] Local Indices construction.
-    - [ ] ML method(ALE).
+    - [ ] ML method (ALE).
     - [ ] Imputation method (T index).
     - [ ] Repeat sales method.
   - [ ] Local Indices quality test.
