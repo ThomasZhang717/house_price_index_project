@@ -10,8 +10,55 @@ output: html_document
 library(foreign)
 library(dplyr)
 library(lubridate)
-library(gbm)
 library(ggplot2)
 library(caret)
 library(iml)
+```
+
+
+#global accuracy
+#simply construct rppi, reference period is financial year 2004
+```{r}
+#pdp_quarters
+#ls
+#gbm_hedonic_index = data.frame(quarter = 1:68, index = exp(pdp_quarters$yhat - pdp_quarters$yhat[1]) * 100)
+#write.csv(gbm_hedonic_index, "./data/gbm_hedonic_index.csv")
+#lad
+gbm_hedonic_index_lad = data.frame(quarter = 1:68, index = exp(pdp_quarters$yhat - pdp_quarters$yhat[1]) * 100)
+write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_quarterly.csv")
+
+
+#alt
+#I could use Accumulated local effect rather than pdp, because it is faster and unbiased.
+alt = Predictor$new(gbm_full, data = model) # this dataset need to use "model" in line 55, chunk 4.
+alt_quarter = FeatureEffect$new(alt, feature = "quarter_num", grid.size = 100) # the `grid.size` is quite important, because it controls the outputs. I have 68 quarters in the data, then I have to change the grid.size to 68 (change it more to 100 for making sure, I can get 68 quarters), default is 20.
+temp = data.frame(alt_quarter$results)
+gbm_hedonic_index_alt = data.frame(quarter = 1:68, index = 0)
+gbm_hedonic_index_alt$index = exp(temp$.value)/exp(temp$.value[1])*100
+write.csv(gbm_hedonic_index_alt, "./data/gbm_hedonic_index_alt_quarterly.csv")
+
+
+gbm_hedonic_index_impute = data.frame(quarter = 1:68, rate = 1, index = 100)
+#traditional method
+for (i in 1:67){
+  temp_pi = model_train_hedonic[which(model_train_hedonic$quarter_num == i+1),]
+  prediction_pi_t = predict(gbm_full, temp_pi, n.trees = 2000)
+  temp_pi$quarter_num = 1
+  prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
+  pi = exp(mean(prediction_pi_t - prediction_pi))
+  #print(pi)
+  
+  temp_li = model_train_hedonic[which(model_train_hedonic$quarter_num == 1),]
+  prediction_li = predict(gbm_full, temp_li, n.trees = 2000)
+  temp_li$quarter_num = i+1
+  prediction_li_t = predict(gbm_full, temp_li, n.trees = 2000)
+  li = exp(mean(prediction_li_t - prediction_li))
+  #print(li)
+  
+  gbm_hedonic_index_impute$rate[i+1] = sqrt(pi*li)
+  gbm_hedonic_index_impute$index[i+1] = gbm_hedonic_index_impute$rate[i+1]*100#prod(gbm_hedonic_index_impute$rate[1:(i+1)])*100
+  print(i)
+}
+gbm_hedonic_index_impute = gbm_hedonic_index_impute[,-2]
+write.csv(gbm_hedonic_index_impute, "./data/gbm_hedonic_index_impute_quarterly.csv")
 ```
