@@ -24,9 +24,16 @@ library(iml)
 #test the quality of index
 #forward
 ```{r}
+#load indices
 abs_index = read.csv("./data/abs_index.csv")
 colnames(abs_index) = c("quarter", "index")
 abs_index$index = abs_index$index/abs_index$index[1]*100
+
+mlf_index = read.csv("./data/mlf_index_alt_quarterly.csv")
+mlr_index = read.csv("./data/mlr_index_alt_quarterly.csv")
+dit_index = read.csv("./data/dit_index_impute_1t_quarterly.csv")
+dit_index_chained = read.csv("./data/dit_index_impute_chained_quarterly.csv")
+
 
 
 resale_test = model_resale %>%

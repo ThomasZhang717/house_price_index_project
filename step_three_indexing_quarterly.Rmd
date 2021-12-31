@@ -181,7 +181,7 @@ resale_index = data.frame(quarter = 1:68)
 resale_index$index = exp(c(0, glm_resale$coefficients))
 resale_index$index = resale_index$index * 100
 
-write.csv(resale_index, "./data/resale_index_cassehiller_quarterly.csv")
+write.csv(resale_index, "./data/resale_index_caseshiller_quarterly.csv")
 ```
 
 
