@@ -52,7 +52,7 @@ resale_test$abs_index_sale = 0
 #forward predict
 for (i in 1:(nrow(resale_test)-1)) {
   if(resale_test$PARCEL_I[i+1] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+1] == "test" & resale_test$train_test[i] == "train"){
+    if(resale_test$train_test[i+1] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+1] == 0){
       
       resale_test$rs_index_sale[i+1] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+1])]
       
@@ -71,7 +71,7 @@ for (i in 1:(nrow(resale_test)-1)) {
 }
 for (i in 1:(nrow(resale_test)-2)) {
   if(resale_test$PARCEL_I[i+2] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+2] == "test" & resale_test$train_test[i] == "train"){
+    if(resale_test$train_test[i+2] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+2] == 0){
       
       resale_test$rs_index_sale[i+2] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+2])]
       
@@ -90,7 +90,7 @@ for (i in 1:(nrow(resale_test)-2)) {
 }
 for (i in 1:(nrow(resale_test)-3)) {
   if(resale_test$PARCEL_I[i+3] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+3] == "test" & resale_test$train_test[i] == "train"){
+    if(resale_test$train_test[i+3] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+3] == 0){
       
       resale_test$rs_index_sale[i+3] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+3])]
       
@@ -109,7 +109,7 @@ for (i in 1:(nrow(resale_test)-3)) {
 }
 for (i in 1:(nrow(resale_test)-4)) {
   if(resale_test$PARCEL_I[i+4] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+4] == "test" & resale_test$train_test[i] == "train"){
+    if(resale_test$train_test[i+4] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+4] == 0){
       
       resale_test$rs_index_sale[i+4] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+4])]
       
@@ -128,7 +128,7 @@ for (i in 1:(nrow(resale_test)-4)) {
 }
 for (i in 1:(nrow(resale_test)-5)) {
   if(resale_test$PARCEL_I[i+5] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+5] == "test" & resale_test$train_test[i] == "train"){
+    if(resale_test$train_test[i+5] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+5] == 0){
       
       resale_test$rs_index_sale[i+5] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+5])]
       
@@ -147,7 +147,7 @@ for (i in 1:(nrow(resale_test)-5)) {
 }
 for (i in 1:(nrow(resale_test)-6)) {
   if(resale_test$PARCEL_I[i+6] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+6] == "test" & resale_test$train_test[i] == "train"){
+    if(resale_test$train_test[i+6] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+6] == 0){
       
       resale_test$rs_index_sale[i+6] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+6])]
       
@@ -242,7 +242,7 @@ resale_test$abs_index_sale = 0
 #backward predict
 for (i in 1:(nrow(resale_test)-1)) {
   if(resale_test$PARCEL_I[i+1] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+1] == "train" & resale_test$train_test[i] == "test"){
+    if(resale_test$train_test[i+1] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
       
       resale_test$rs_index_sale[i] = resale_test$SALE1[i+1] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+1])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])]
       
@@ -261,7 +261,7 @@ for (i in 1:(nrow(resale_test)-1)) {
 }
 for (i in 1:(nrow(resale_test)-2)) {
   if(resale_test$PARCEL_I[i+2] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+2] == "train" & resale_test$train_test[i] == "test"){
+    if(resale_test$train_test[i+2] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
       
       resale_test$rs_index_sale[i] = resale_test$SALE1[i+2] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+2])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])]
       
@@ -280,7 +280,7 @@ for (i in 1:(nrow(resale_test)-2)) {
 }
 for (i in 1:(nrow(resale_test)-3)) {
   if(resale_test$PARCEL_I[i+3] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+3] == "train" & resale_test$train_test[i] == "test"){
+    if(resale_test$train_test[i+3] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
       
       resale_test$rs_index_sale[i] = resale_test$SALE1[i+3] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+3])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])]
       
@@ -299,7 +299,7 @@ for (i in 1:(nrow(resale_test)-3)) {
 }
 for (i in 1:(nrow(resale_test)-4)) {
   if(resale_test$PARCEL_I[i+4] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+4] == "train" & resale_test$train_test[i] == "test"){
+    if(resale_test$train_test[i+4] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
       
       resale_test$rs_index_sale[i] = resale_test$SALE1[i+4] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+4])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])]
       
@@ -318,7 +318,7 @@ for (i in 1:(nrow(resale_test)-4)) {
 }
 for (i in 1:(nrow(resale_test)-5)) {
   if(resale_test$PARCEL_I[i+5] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+5] == "train" & resale_test$train_test[i] == "test"){
+    if(resale_test$train_test[i+5] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
       
       resale_test$rs_index_sale[i] = resale_test$SALE1[i+5] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+5])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])]
       
@@ -337,7 +337,7 @@ for (i in 1:(nrow(resale_test)-5)) {
 }
 for (i in 1:(nrow(resale_test)-6)) {
   if(resale_test$PARCEL_I[i+6] == resale_test$PARCEL_I[i]){
-    if(resale_test$train_test[i+6] == "train" & resale_test$train_test[i] == "test"){
+    if(resale_test$train_test[i+6] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
       
       resale_test$rs_index_sale[i] = resale_test$SALE1[i+6] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+6])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])]
       

@@ -198,7 +198,6 @@ write.csv(resale_index, "./data/resale_index_caseshiller_quarterly.csv")
 
 
 
-
 #local accuracy
 #gbm pdp index
 ```{r}
