@@ -133,6 +133,7 @@ save.image("./cross_section_window_index.RData")
 
 
 
+#global
 #resale indexing
 #prepare resales
 ```{r}
@@ -186,77 +187,13 @@ write.csv(resale_index, "./data/resale_index_caseshiller_quarterly.csv")
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-#local accuracy
-#gbm pdp index
+#local
+#resale indexing
 ```{r}
-#pdp_quarters and LA_DESC
-#ls
-#gbm_hedonic_index = data.frame(quarter = pdp_quarters_lga$quarter_num, LA_DESC = pdp_quarters_lga$LA_DESC, index = exp(pdp_quarters_lga$yhat - baseline) * 100)
-#write.csv(gbm_hedonic_index, "./data/gbm_hedonic_index_lga.csv")
-#lad
-gbm_hedonic_index_lad = pdp_quarters_lga[order(pdp_quarters_lga$LA_DESC),]
-colnames(gbm_hedonic_index_lad) = c("quarter", "LA_DESC", "yhat")
-gbm_hedonic_index_lad$index = 0
-for (i in seq(1,2040,68)) {
-  gbm_hedonic_index_lad$index[i:(i+67)] = exp(gbm_hedonic_index_lad$yhat[i:(i+67)]-gbm_hedonic_index_lad$yhat[i])*100
-}
-gbm_hedonic_index_lad = gbm_hedonic_index_lad[,-3]
-write.csv(gbm_hedonic_index_lad, "./data/gbm_hedonic_index_lad_lga_quarterly.csv")
-```
-
-
-#gbm pdp index
-```{r}
-la_desc = data.frame(table(resale$LA_DESC))
-gbm_hedonic_index_impute = data.frame(quarter = rep(1:68,30), rate = 1, LA_DESC = "", index = 100)
-
-n=1
-#traditional method
-for (i in la_desc[,1]) {
-  temp_hedonic = model_train_hedonic[which(model_train_hedonic$LA_DESC == i),]
-  for (j in 1:67){
-    temp_pi = temp_hedonic[which(temp_hedonic$quarter_num == j+1),]
-    temp_pi$quarter_num = 1
-    prediction_pi = predict(gbm_full, temp_pi, n.trees = 2000)
-    pi = exp(mean(temp_pi$logprice - prediction_pi))
-    #print(pi)
-  
-    temp_li = temp_hedonic[which(temp_hedonic$quarter_num == 1),]
-    temp_li$quarter_num = j+1
-    prediction_li = predict(gbm_full, temp_li, n.trees = 2000)
-    li = exp(mean(prediction_li - temp_li$logprice))
-    #print(li)
-  
-    gbm_hedonic_index_impute$rate[(n-1)*68+j+1] = sqrt(pi*li)
-    gbm_hedonic_index_impute$index[(n-1)*68+j+1] = gbm_hedonic_index_impute$rate[(n-1)*68+j+1]*100#prod(gbm_hedonic_index_impute$rate[((n-1)*68+1):((n-1)*68+j+1)])*100
-    print(j)
-  }
-  gbm_hedonic_index_impute$LA_DESC = i
-  n=n+1
-  print(i)
-}
-gbm_hedonic_index_impute = gbm_hedonic_index_impute[,-2]
-write.csv(gbm_hedonic_index_impute, "./data/gbm_hedonic_index_impute_lga_quarterly.csv")
-```
-
-
-#resale index
-```{r}
-la_desc = data.frame(table(resale$LA_DESC))
+resale = read.csv("./data/raw_data_2004_2020_RPPI_repeatsales_train_prepared.csv")[-1]
+lga = data.frame(table(resale$LA_DESC))
 resale_index = data.frame()
-for (i in la_desc[,1]) {
+for (i in lga$Var1) {
   temp_resale = resale[which(resale$LA_DESC == i),]
   model = data.frame(log_diff = log(temp_resale$sale) - log(temp_resale$sale_pre), quarter = temp_resale$quarter_num, quarter_pre = temp_resale$quarter_num_pre, quarter_1 = 0, quarter_2 = 0, quarter_3 = 0, quarter_4 = 0, quarter_5 = 0, quarter_6 = 0, quarter_7 = 0, quarter_8 = 0, quarter_9 = 0, quarter_10 = 0, quarter_11 = 0, quarter_12 = 0, quarter_13 = 0, quarter_14 = 0, quarter_15 = 0, quarter_16 = 0, quarter_17 = 0, quarter_18 = 0, quarter_19 = 0, quarter_20 = 0, quarter_21 = 0, quarter_22 = 0, quarter_23 = 0, quarter_24 = 0, quarter_25 = 0, quarter_26 = 0, quarter_27 = 0, quarter_28 = 0, quarter_29 = 0, quarter_30 = 0, quarter_31 = 0, quarter_32 = 0, quarter_33 = 0, quarter_34 = 0, quarter_35 = 0, quarter_36 = 0, quarter_37 = 0, quarter_38 = 0, quarter_39 = 0, quarter_40 = 0, quarter_41 = 0, quarter_42 = 0, quarter_43 = 0, quarter_44 = 0, quarter_45 = 0, quarter_46 = 0, quarter_47 = 0, quarter_48 = 0, quarter_49 = 0, quarter_50 = 0, quarter_51 = 0, quarter_52 = 0, quarter_53 = 0, quarter_54 = 0, quarter_55 = 0, quarter_56 = 0, quarter_57 = 0, quarter_58 = 0, quarter_59 = 0, quarter_60 = 0, quarter_61 = 0, quarter_62 = 0, quarter_63 = 0, quarter_64 = 0, quarter_65 = 0, quarter_66 = 0, quarter_67 = 0, quarter_68 = 0)
   for (j in 1:68) {
@@ -267,23 +204,35 @@ for (i in la_desc[,1]) {
   }
   model = model[,-c(2,3,4)]
 
-  lm_resale_temp = lm(log_diff ~ . - 1, data = model)
+  #step 1: BMN index
+  lm_resale = lm(log_diff ~ . - 1, data = model)
+  #step 2: residual and interval
+  temp_cs = data.frame(sq_r = (lm_resale$residuals)^2, time_interval = temp_resale$quarter_num - temp_resale$quarter_num_pre)
+  lm_weights = lm(sq_r ~ time_interval, data = temp_cs)
+  glm_weights = sqrt(lm_weights$fitted.values)
+  #step 3: case-shiller index
+  glm_resale = glm(log_diff ~ . -1, data = model, weights = glm_weights)
+  
   #index
   resale_index_temp = data.frame(quarter = 1:68)
-  resale_index_temp$LA_DESC = i
-  resale_index_temp$index = exp(c(0, lm_resale_temp$coefficients))
+  resale_index_temp$index = 0
+  resale_index_temp$index[1:(length(glm_resale$coefficients)+1)] = exp(c(0, glm_resale$coefficients))
   resale_index_temp$index = resale_index_temp$index * 100
+  resale_index_temp$lga = i
   
   
   resale_index = rbind(resale_index, resale_index_temp)
   print(i)
 }
+
+#save data
+write.csv(resale_index, "./data/resale_local_index_caseshiller_quarterly.csv")
 ```
 
 
 
 
-#test the quality of index
+#test the quality of index (xian liu zhe, ce shi quanlity de shi hou zai yong)
 ```{r}
 resale_test = model_resale %>%
   filter(model_resale$resale_freq > 2)
