@@ -398,7 +398,7 @@ for (j in lga$Var1) {
       #print(pi)
   
       temp_li = get(paste0("train_window_", 1))
-      temp_li = temp_li[which(temp_pi$LA_DESC == j),]
+      temp_li = temp_li[which(temp_li$LA_DESC == j),]
       temp_gbm = get(paste0("gbm_cross_section_window_", 1))
       prediction_li = predict(temp_gbm, temp_li, n.trees = 2000)
       temp_li$quarter_num = i
@@ -441,7 +441,7 @@ for (j in lga$Var1) {
       #print(pi)
   
       temp_li = get(paste0("train_window_", i-1))
-      temp_li = temp_li[which(temp_pi$LA_DESC == j),]
+      temp_li = temp_li[which(temp_li$LA_DESC == j),]
       temp_gbm = get(paste0("gbm_cross_section_window_", i-1))
       prediction_li = predict(temp_gbm, temp_li, n.trees = 2000)
       temp_li$quarter_num = i
@@ -461,7 +461,7 @@ for (j in lga$Var1) {
 }
 
 #save index
-write.csv(dit_index_impute_chained, "./data/dit_index_local_impute_chained_quarterly.csv")
+write.csv(dit_index_impute_chained, "./data/dit_local_index_impute_chained_quarterly.csv")
 ```
 #step five: make 'load index' part seperately for global and local rppis, two chunks.
 #test part in one chunk from the line 'model_resale = bulabula"
