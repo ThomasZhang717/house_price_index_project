@@ -386,7 +386,7 @@ n=0
 for (j in lga$Var1) {
   dit_index_impute_temp = data.frame(quarter = 1:68, rate = 1, index = 100)
   for (i in 2:68){
-    if (j != "PERTH CITY COUNCIL       " | i < 23){
+    if (j != "PERTH CITY COUNCIL       " | i < 24){
       temp_pi = get(paste0("train_window_", i))
       temp_pi = temp_pi[which(temp_pi$LA_DESC == j),]
       temp_gbm = get(paste0("gbm_cross_section_window_", i))
@@ -429,7 +429,7 @@ for (j in lga$Var1) {
   dit_index_impute_chained_temp = data.frame(quarter = 1:68, rate = 1, index = 100)
 #traditional method
   for (i in 2:68){
-    if (j != "PERTH CITY COUNCIL       " | i < 23){
+    if (j != "PERTH CITY COUNCIL       " | i < 24){
       temp_pi = get(paste0("train_window_", i))
       temp_pi = temp_pi[which(temp_pi$LA_DESC == j),]
       temp_gbm = get(paste0("gbm_cross_section_window_", i))
