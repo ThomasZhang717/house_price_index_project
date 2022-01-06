@@ -1,0 +1,281 @@
+---
+title: "revision"
+author: "Zhuoran"
+date: "06/01/2022"
+output: html_document
+---
+
+
+#libraries
+```{r}
+library(foreign)
+library(dplyr)
+library(lubridate)
+library(gbm)
+library(pdp)
+library(doParallel)
+library(foreach)
+library(ggplot2)
+library(caret)
+library(iml)
+```
+
+
+
+#import data (if use train_test_split_backup, no need to run this)
+```{r}
+model_train_hedonic = read.csv("./data/raw_data_2004_2020_RPPI_hedonic_train.csv")[-1]
+
+model_train_hedonic$LA_DESC = as.factor(model_train_hedonic$LA_DESC)
+model_train_hedonic$PROP_CLA = as.factor(model_train_hedonic$PROP_CLA)
+model_train_hedonic$submarket = as.factor(model_train_hedonic$submarket)
+model_train_hedonic$logprice = log(model_train_hedonic$SALE1)
+```
+
+
+
+#prepare data for modeling
+```{r}
+model = data.frame(logprice = model_train_hedonic$logprice,
+                   quarter_num = model_train_hedonic$quarter_num, 
+                   LAND_ARE = model_train_hedonic$LAND_ARE, 
+                   AREA_HSE = model_train_hedonic$AREA_HSE, 
+                   age = model_train_hedonic$age, 
+                   BEDS = model_train_hedonic$BEDS,
+                   BATHS = model_train_hedonic$BATHS, 
+                   DINING = model_train_hedonic$DINING, 
+                   KITCHEN = model_train_hedonic$KITCHEN, 
+                   FAMILY = model_train_hedonic$FAMILY, 
+                   STUDY = model_train_hedonic$STUDY, 
+                   GAMES = model_train_hedonic$GAMES, 
+                   LOUNGE = model_train_hedonic$LOUNGE, 
+                   MEALS = model_train_hedonic$MEALS, 
+                   carpark = model_train_hedonic$carpark, 
+                   LA_DESC = model_train_hedonic$LA_DESC, 
+                   PROP_CLA = model_train_hedonic$PROP_CLA, 
+                   centlong = model_train_hedonic$centlong, 
+                   centlat = model_train_hedonic$centlat, 
+                   TENCRT = model_train_hedonic$TENCRT,
+                   d_pool = model_train_hedonic$d_pool, 
+                   d_brick = model_train_hedonic$d_brick, 
+                   d_tile = model_train_hedonic$d_tile)
+```
+
+
+
+#revision (full sample)
+```{r}
+mlf_revison = data.frame()
+
+for (i in 28:68) {
+  load(paste0("C:/Users/Thomas/OneDrive - Curtin University of Technology Australia/Desktop/Nimbus computing/index/full_sample_index_revsion_quarter_", i,".RData"))
+  
+  model_temp = model[which(model$quarter_num <= i),]
+  
+  mlf_revison[1:68,(i-27)] = 0
+
+  alt = Predictor$new(gbm_full, data = model_temp)
+  alt_quarter = FeatureEffect$new(alt, feature = "quarter_num", grid.size = 100)
+  
+  temp = data.frame(alt_quarter$results)
+  mlf_revison[1:nrow(temp),(i-27)] = exp(temp$.value)/exp(temp$.value[1])*100
+  
+  colnames(mlf_revison)[i-27] = paste0("index_revision_quarter_", i)
+  print(paste0("Quarter ", i, " is done."))
+}
+
+#save
+write.csv(mlf_revison, "./data/mlf_index_revision_quaterly.csv")
+
+mlf_quarters_revison = data.frame()
+#check the revisions
+for (i in 1:67) {
+  for (j in 1:40) {
+    if (mlf_revison[i,j] != 0){
+      mlf_quarters_revison[i,j] = (mlf_revison[i,j+1] / mlf_revison[i,j] - 1) * 100
+    }
+    else{
+      mlf_quarters_revison[i,j] = NA
+    }
+    colnames(mlf_quarters_revison)[j] = paste0("index_diff_", j+27,"_",j+28)
+  }
+}
+
+
+#summarize revision
+#all
+mlf_revison_summary = NA
+for (i in 1:40) {
+  mlf_revison_summary = c(mlf_revison_summary, mlf_quarters_revison[,i])
+}
+
+mlf_revison_summary = as.data.frame(mlf_revison_summary)
+
+mlf_revison_summary = mlf_revison_summary %>%
+  filter(mlf_revison_summary != 0)
+
+mean(mlf_revison_summary$mlf_revison_summary)
+sd(mlf_revison_summary$mlf_revison_summary)
+
+
+#early 8 quarters
+mlf_revison_summary = NA
+for (i in 2:67) {
+  temp = mlf_quarters_revison[i,]
+  temp = temp[which(!is.na(temp))]
+  if (length(temp) >= 8){
+    mlf_revison_summary = c(mlf_revison_summary, temp[1:8])
+  }
+  else{
+    mlf_revison_summary = c(mlf_revison_summary, temp)
+  }
+}
+
+mlf_revison_summary = as.data.frame(t(as.data.frame(mlf_revison_summary)))
+
+mlf_revison_summary = mlf_revison_summary %>%
+  filter(mlf_revison_summary != 0)
+
+mean(mlf_revison_summary$V1)
+sd(mlf_revison_summary$V1)
+
+
+
+#the remain quarters
+mlf_revison_summary = NA
+for (i in 2:67) {
+  temp = mlf_quarters_revison[i,]
+  temp = temp[which(!is.na(temp))]
+  if (length(temp) > 8){
+    mlf_revison_summary = c(mlf_revison_summary, temp[9:length(temp)])
+  }
+}
+
+mlf_revison_summary = as.data.frame(t(as.data.frame(mlf_revison_summary)))
+
+mlf_revison_summary = mlf_revison_summary %>%
+  filter(mlf_revison_summary != 0)
+
+mean(mlf_revison_summary$V1)
+sd(mlf_revison_summary$V1)
+```
+
+
+
+#revision (repeat sales)
+```{r}
+#prepare resale data
+resale = read.csv("./data/raw_data_2004_2020_RPPI_repeatsales_train_prepared.csv")
+
+rs_revison = data.frame()
+
+for (i in 28:68) {
+  resale_temp = resale[which(resale$quarter_num <= i),]
+  
+  model = data.frame(log_diff = log(resale_temp$sale) - log(resale_temp$sale_pre), quarter = resale_temp$quarter_num, quarter_pre = resale_temp$quarter_num_pre, quarter_1 = 0, quarter_2 = 0)
+  model = fastDummies::dummy_cols(model, select_columns = c("quarter"))
+  for (j in 1:(i-2)) {
+    model[which(model$quarter_pre == j),3+j] = -1
+  }
+  model = model[,-c(2,3,4)]
+  
+  rs_revison[1:68,(i-27)] = 0
+
+  #resale index: case-shiller index
+  #step 1: BMN index
+  lm_resale = lm(log_diff ~ . - 1, data = model)
+  #step 2: residual and interval
+  temp_cs = data.frame(sq_r = (lm_resale$residuals)^2, time_interval = resale_temp$quarter_num - resale_temp$quarter_num_pre)
+  lm_weights = lm(sq_r ~ time_interval, data = temp_cs)
+  glm_weights = sqrt(lm_weights$fitted.values)
+  #step 3: case-shiller index
+  glm_resale = glm(log_diff ~ . -1, data = model, weights = glm_weights)
+  #index  
+  
+  temp = data.frame(index = exp(c(0, glm_resale$coefficients)) * 100)
+  rs_revison[1:nrow(temp),(i-27)] = temp$index
+  
+  colnames(rs_revison)[i-27] = paste0("index_revision_quarter_", i)
+  print(paste0("Quarter ", i, " is done."))
+}
+
+#save
+write.csv(rs_revison, "./data/rs_index_revision_quaterly.csv")
+
+rs_quarters_revison = data.frame()
+#check the revisions
+for (i in 1:67) {
+  for (j in 1:40) {
+    if (rs_revison[i,j] != 0){
+      rs_quarters_revison[i,j] = (rs_revison[i,j+1] / rs_revison[i,j] - 1) * 100
+    }
+    else{
+      rs_quarters_revison[i,j] = NA
+    }
+    colnames(rs_quarters_revison)[j] = paste0("index_diff_", j+27,"_",j+28)
+  }
+}
+
+
+#summarize revision
+#all
+rs_revison_summary = NA
+for (i in 1:40) {
+  rs_revison_summary = c(rs_revison_summary, rs_quarters_revison[,i])
+}
+
+rs_revison_summary = as.data.frame(rs_revison_summary)
+
+rs_revison_summary = rs_revison_summary %>%
+  filter(rs_revison_summary != 0)
+
+mean(rs_revison_summary$rs_revison_summary)
+sd(rs_revison_summary$rs_revison_summary)
+
+
+#early 8 quarters
+rs_revison_summary = NA
+for (i in 2:67) {
+  temp = rs_quarters_revison[i,]
+  temp = temp[which(!is.na(temp))]
+  if (length(temp) >= 8){
+    rs_revison_summary = c(rs_revison_summary, temp[1:8])
+  }
+  else{
+    rs_revison_summary = c(rs_revison_summary, temp)
+  }
+}
+
+rs_revison_summary = as.data.frame(t(as.data.frame(rs_revison_summary)))
+
+rs_revison_summary = rs_revison_summary %>%
+  filter(rs_revison_summary != 0)
+
+mean(rs_revison_summary$V1)
+sd(rs_revison_summary$V1)
+
+
+
+#the remain quarters
+rs_revison_summary = NA
+for (i in 2:67) {
+  temp = rs_quarters_revison[i,]
+  temp = temp[which(!is.na(temp))]
+  if (length(temp) > 8){
+    rs_revison_summary = c(rs_revison_summary, temp[9:length(temp)])
+  }
+}
+
+rs_revison_summary = as.data.frame(t(as.data.frame(rs_revison_summary)))
+
+rs_revison_summary = rs_revison_summary %>%
+  filter(rs_revison_summary != 0)
+
+mean(rs_revison_summary$V1)
+sd(rs_revison_summary$V1)
+```
+
+
+
+
+

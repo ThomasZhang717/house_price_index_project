@@ -175,7 +175,7 @@ resale_test = resale_test %>%
 
 #abs_index
 temp = (resale_test$SALE1 - resale_test$abs_index_sale)/resale_test$abs_index_sale
-temp = log(resale_test$SALE1) - log(resale_test$abs_index_sale)
+#temp = log(resale_test$SALE1) - log(resale_test$abs_index_sale)
 median(temp)
 median(abs(temp))
 sum(abs(temp)>0.1)/24029
@@ -211,6 +211,7 @@ median(abs(temp))
 sum(abs(temp)>0.1)/24029
 sum(abs(temp)>0.2)/24029
 ```
+
 
 
 #backward
@@ -365,41 +366,41 @@ resale_test = resale_test %>%
 
 #abs_index
 temp = (resale_test$SALE1 - resale_test$abs_index_sale)/resale_test$abs_index_sale
-temp = log(resale_test$SALE1) - log(resale_test$abs_index_sale)
+#temp = log(resale_test$SALE1) - log(resale_test$abs_index_sale)
 median(temp)
 median(abs(temp))
-sum(abs(temp)>0.1)/24029
-sum(abs(temp)>0.2)/24029
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
 #dit_index
 temp = (resale_test$SALE1 - resale_test$dit_index_sale)/resale_test$dit_index_sale
 median(temp)
 median(abs(temp))
-sum(abs(temp)>0.1)/24029
-sum(abs(temp)>0.2)/24029
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
 #dit_index_chained
 temp = (resale_test$SALE1 - resale_test$dit_index_chained_sale)/resale_test$dit_index_chained_sale
 median(temp)
 median(abs(temp))
-sum(abs(temp)>0.1)/24029
-sum(abs(temp)>0.2)/24029
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
 #rs_index
 temp = (resale_test$SALE1 - resale_test$rs_index_sale)/resale_test$rs_index_sale
 median(temp)
 median(abs(temp))
-sum(abs(temp)>0.1)/24029
-sum(abs(temp)>0.2)/24029
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
 #mlf_index
 temp = (resale_test$SALE1 - resale_test$mlf_index_sale)/resale_test$mlf_index_sale
 median(temp)
 median(abs(temp))
-sum(abs(temp)>0.1)/24029
-sum(abs(temp)>0.2)/24029
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
 #mlr_index
 temp = (resale_test$SALE1 - resale_test$mlr_index_sale)/resale_test$mlr_index_sale
 median(temp)
 median(abs(temp))
-sum(abs(temp)>0.1)/24029
-sum(abs(temp)>0.2)/24029
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
 ```
 
 
@@ -410,7 +411,7 @@ indice = rbind(abs_index, dit_index[,-2], dit_index_chained[,-2], mlf_index, mlr
 indice$method = c(rep("ABS Index", 68), rep("DIT", 68), rep("DIT_Chained", 68), rep("MLF", 68), rep("MLR", 68), rep("RS", 68))
 
 
-indices_plot = ggplot(indice, aes(quarter, index, color = method, linetype = method)) + geom_line(size = 1.2) + scale_color_grey(start = 0, end = 0.8, limits = c("ABS Index", "DIT", "DIT_Chained", "MLF", "MLR", "RS"), labels = c("ABS Index", "Hedonic Imputation Index", "HI_Chained Index", "MLF Index", "MLR Index", "Repeat Sales Index")) + scale_linetype_discrete(limits = c("ABS Index", "DIT", "DIT_Chained", "MLF", "MLR", "RS"), labels = c("ABS Index", "Hedonic Imputation Index", "HI_Chained Index", "MLF Index", "MLR Index", "Repeat Sales Index")) + theme_bw() + scale_x_continuous(name = "Quater",breaks = c(1, 17, 33, 49, 65), labels = c("2004Q1", "2008Q1", "2012Q1", "2016Q1", "2020Q1"))
+indices_plot = ggplot(indice, aes(quarter, index, color = method, linetype = method)) + geom_line(size = 1.2) + scale_color_grey(start = 0, end = 0.8, limits = c("ABS Index", "DIT", "DIT_Chained", "MLF", "MLR", "RS"), labels = c("ABS Index", "HI Index", "HI_Chained Index", "MLF Index", "MLR Index", "Repeat Sales Index")) + scale_linetype_discrete(limits = c("ABS Index", "DIT", "DIT_Chained", "MLF", "MLR", "RS"), labels = c("ABS Index", "HI Index", "HI_Chained Index", "MLF Index", "MLR Index", "Repeat Sales Index")) + theme_bw() + scale_x_continuous(name = "Quater",breaks = c(1, 17, 33, 49, 65), labels = c("2004Q1", "2008Q1", "2012Q1", "2016Q1", "2020Q1"))
 
 indices_plot
 ```
@@ -441,24 +442,21 @@ resale_test$dit_index_chained_sale = 0
 resale_test$dit_index_sale = 0
 resale_test$mlr_index_sale = 0
 resale_test$mlf_index_sale = 0
-resale_test$abs_index_sale = 0
 
 #forward predict
 for (i in 1:(nrow(resale_test)-1)) {
   if(resale_test$PARCEL_I[i+1] == resale_test$PARCEL_I[i]){
     if(resale_test$train_test[i+1] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+1] == 0){
       
-      resale_test$rs_index_sale[i+1] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+1])]
+      resale_test$rs_index_sale[i+1] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+1] & rs_index$lga == resale_test$LA_DESC[i+1])]
       
-      resale_test$dit_index_chained_sale[i+1] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+1])]
+      resale_test$dit_index_chained_sale[i+1] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+1] & dit_index_chained$lga == resale_test$LA_DESC[i+1])]
       
-      resale_test$dit_index_sale[i+1] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+1])]
+      resale_test$dit_index_sale[i+1] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+1] & dit_index$lga == resale_test$LA_DESC[i+1])]
       
-      resale_test$mlr_index_sale[i+1] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+1])]
+      resale_test$mlr_index_sale[i+1] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+1] & mlr_index$lga == resale_test$LA_DESC[i+1])]
       
-      resale_test$mlf_index_sale[i+1] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+1])]
-      
-      resale_test$abs_index_sale[i+1] = resale_test$SALE1[i] / abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i])] * abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i+1])]
+      resale_test$mlf_index_sale[i+1] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+1] & mlf_index$lga == resale_test$LA_DESC[i+1])]
     }
   }
   print(i)
@@ -467,17 +465,15 @@ for (i in 1:(nrow(resale_test)-2)) {
   if(resale_test$PARCEL_I[i+2] == resale_test$PARCEL_I[i]){
     if(resale_test$train_test[i+2] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+2] == 0){
       
-      resale_test$rs_index_sale[i+2] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+2])]
+      resale_test$rs_index_sale[i+2] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+2] & rs_index$lga == resale_test$LA_DESC[i+2])]
       
-      resale_test$dit_index_chained_sale[i+2] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+2])]
+      resale_test$dit_index_chained_sale[i+2] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+2] & dit_index_chained$lga == resale_test$LA_DESC[i+2])]
       
-      resale_test$dit_index_sale[i+2] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+2])]
+      resale_test$dit_index_sale[i+2] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+2] & dit_index$lga == resale_test$LA_DESC[i+2])]
       
-      resale_test$mlr_index_sale[i+2] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+2])]
+      resale_test$mlr_index_sale[i+2] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+2] & mlr_index$lga == resale_test$LA_DESC[i+2])]
       
-      resale_test$mlf_index_sale[i+2] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+2])]
-      
-      resale_test$abs_index_sale[i+2] = resale_test$SALE1[i] / abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i])] * abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i+2])]
+      resale_test$mlf_index_sale[i+2] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+2] & mlf_index$lga == resale_test$LA_DESC[i+2])]
     }
   }
   print(i)
@@ -486,17 +482,15 @@ for (i in 1:(nrow(resale_test)-3)) {
   if(resale_test$PARCEL_I[i+3] == resale_test$PARCEL_I[i]){
     if(resale_test$train_test[i+3] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+3] == 0){
       
-      resale_test$rs_index_sale[i+3] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+3])]
+      resale_test$rs_index_sale[i+3] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+3] & rs_index$lga == resale_test$LA_DESC[i+3])]
       
-      resale_test$dit_index_chained_sale[i+3] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+3])]
+      resale_test$dit_index_chained_sale[i+3] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+3] & dit_index_chained$lga == resale_test$LA_DESC[i+3])]
       
-      resale_test$dit_index_sale[i+3] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+3])]
+      resale_test$dit_index_sale[i+3] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+3] & dit_index$lga == resale_test$LA_DESC[i+3])]
       
-      resale_test$mlr_index_sale[i+3] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+3])]
+      resale_test$mlr_index_sale[i+3] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+3] & mlr_index$lga == resale_test$LA_DESC[i+3])]
       
-      resale_test$mlf_index_sale[i+3] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+3])]
-      
-      resale_test$abs_index_sale[i+3] = resale_test$SALE1[i] / abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i])] * abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i+3])]
+      resale_test$mlf_index_sale[i+3] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+3] & mlf_index$lga == resale_test$LA_DESC[i+3])]
     }
   }
   print(i)
@@ -505,17 +499,15 @@ for (i in 1:(nrow(resale_test)-4)) {
   if(resale_test$PARCEL_I[i+4] == resale_test$PARCEL_I[i]){
     if(resale_test$train_test[i+4] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+4] == 0){
       
-      resale_test$rs_index_sale[i+4] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+4])]
+      resale_test$rs_index_sale[i+4] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+4] & rs_index$lga == resale_test$LA_DESC[i+4])]
       
-      resale_test$dit_index_chained_sale[i+4] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+4])]
+      resale_test$dit_index_chained_sale[i+4] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+4] & dit_index_chained$lga == resale_test$LA_DESC[i+4])]
       
-      resale_test$dit_index_sale[i+4] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+4])]
+      resale_test$dit_index_sale[i+4] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+4] & dit_index$lga == resale_test$LA_DESC[i+4])]
       
-      resale_test$mlr_index_sale[i+4] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+4])]
+      resale_test$mlr_index_sale[i+4] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+4] & mlr_index$lga == resale_test$LA_DESC[i+4])]
       
-      resale_test$mlf_index_sale[i+4] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+4])]
-      
-      resale_test$abs_index_sale[i+4] = resale_test$SALE1[i] / abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i])] * abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i+4])]
+      resale_test$mlf_index_sale[i+4] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+4] & mlf_index$lga == resale_test$LA_DESC[i+4])]
     }
   }
   print(i)
@@ -524,17 +516,15 @@ for (i in 1:(nrow(resale_test)-5)) {
   if(resale_test$PARCEL_I[i+5] == resale_test$PARCEL_I[i]){
     if(resale_test$train_test[i+5] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+5] == 0){
       
-      resale_test$rs_index_sale[i+5] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+5])]
+      resale_test$rs_index_sale[i+6] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+6] & rs_index$lga == resale_test$LA_DESC[i+6])]
       
-      resale_test$dit_index_chained_sale[i+5] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+5])]
+      resale_test$dit_index_chained_sale[i+6] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+6] & dit_index_chained$lga == resale_test$LA_DESC[i+6])]
       
-      resale_test$dit_index_sale[i+5] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+5])]
+      resale_test$dit_index_sale[i+6] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+6] & dit_index$lga == resale_test$LA_DESC[i+6])]
       
-      resale_test$mlr_index_sale[i+5] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+5])]
+      resale_test$mlr_index_sale[i+6] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+6] & mlr_index$lga == resale_test$LA_DESC[i+6])]
       
-      resale_test$mlf_index_sale[i+5] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+5])]
-      
-      resale_test$abs_index_sale[i+5] = resale_test$SALE1[i] / abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i])] * abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i+5])]
+      resale_test$mlf_index_sale[i+6] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+6] & mlf_index$lga == resale_test$LA_DESC[i+6])]
     }
   }
   print(i)
@@ -543,17 +533,15 @@ for (i in 1:(nrow(resale_test)-6)) {
   if(resale_test$PARCEL_I[i+6] == resale_test$PARCEL_I[i]){
     if(resale_test$train_test[i+6] == "test" & resale_test$train_test[i] == "train" & resale_test$rs_index_sale[i+6] == 0){
       
-      resale_test$rs_index_sale[i+6] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+6])]
+      resale_test$rs_index_sale[i+6] = resale_test$SALE1[i] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+6] & rs_index$lga == resale_test$LA_DESC[i+6])]
       
-      resale_test$dit_index_chained_sale[i+6] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+6])]
+      resale_test$dit_index_chained_sale[i+6] = resale_test$SALE1[i] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+6] & dit_index_chained$lga == resale_test$LA_DESC[i+6])]
       
-      resale_test$dit_index_sale[i+6] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+6])]
+      resale_test$dit_index_sale[i+6] = resale_test$SALE1[i] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+6] & dit_index$lga == resale_test$LA_DESC[i+6])]
       
-      resale_test$mlr_index_sale[i+6] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+6])]
+      resale_test$mlr_index_sale[i+6] = resale_test$SALE1[i] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+6] & mlr_index$lga == resale_test$LA_DESC[i+6])]
       
-      resale_test$mlf_index_sale[i+6] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+6])]
-      
-      resale_test$abs_index_sale[i+6] = resale_test$SALE1[i] / abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i])] * abs_index$index[which(abs_index$quarter == resale_test$quarter_num[i+6])]
+      resale_test$mlf_index_sale[i+6] = resale_test$SALE1[i] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+6] & mlf_index$lga == resale_test$LA_DESC[i+6])]
     }
   }
   print(i)
@@ -564,15 +552,9 @@ resale_test = resale_test %>%
   filter(resale_test$train_test == "test")
 
 resale_test = resale_test %>%
-  filter(resale_test$abs_index_sale > 0)
+  filter(resale_test$mlr_index_sale > 0)
 
-#abs_index
-temp = (resale_test$SALE1 - resale_test$abs_index_sale)/resale_test$abs_index_sale
-temp = log(resale_test$SALE1) - log(resale_test$abs_index_sale)
-median(temp)
-median(abs(temp))
-sum(abs(temp)>0.1)/24029
-sum(abs(temp)>0.2)/24029
+
 #dit_index
 temp = (resale_test$SALE1 - resale_test$dit_index_sale)/resale_test$dit_index_sale
 median(temp)
@@ -603,4 +585,172 @@ median(temp)
 median(abs(temp))
 sum(abs(temp)>0.1)/24029
 sum(abs(temp)>0.2)/24029
+```
+
+
+
+#backward
+```{r}
+#load indices
+mlf_index = read.csv("./data/mlf_local_index_alt_quarterly.csv")[-1]
+mlr_index = read.csv("./data/mlr_local_index_alt_quarterly.csv")[-1]
+dit_index = read.csv("./data/dit_local_index_impute_1t_quarterly.csv")[-1]
+dit_index_chained = read.csv("./data/dit_local_index_impute_chained_quarterly.csv")[-1]
+rs_index = read.csv("./data/resale_local_index_caseshiller_quarterly.csv")[-1]
+
+
+model_resale = read.csv("./data/raw_data_2004_2020_RPPI_repeatsales.csv")
+
+resale_test = model_resale %>%
+  filter(model_resale$resale_freq > 2)
+
+resale_test$rs_index_sale = 0
+resale_test$dit_index_chained_sale = 0
+resale_test$dit_index_sale = 0
+resale_test$mlr_index_sale = 0
+resale_test$mlf_index_sale = 0
+
+
+#backward predict
+for (i in 1:(nrow(resale_test)-1)) {
+  if(resale_test$PARCEL_I[i+1] == resale_test$PARCEL_I[i]){
+    if(resale_test$train_test[i+1] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
+      
+      resale_test$rs_index_sale[i] = resale_test$SALE1[i+1] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+1] & rs_index$lga == resale_test$LA_DESC[i+1])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_chained_sale[i] = resale_test$SALE1[i+1] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+1] & dit_index_chained$lga == resale_test$LA_DESC[i+1])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_sale[i] = resale_test$SALE1[i+1] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+1] & dit_index$lga == resale_test$LA_DESC[i+1])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlr_index_sale[i] = resale_test$SALE1[i+1] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+1] & mlr_index$lga == resale_test$LA_DESC[i+1])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlf_index_sale[i] = resale_test$SALE1[i+1] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+1] & mlf_index$lga == resale_test$LA_DESC[i+1])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])]
+    }
+  }
+  print(i)
+}
+for (i in 1:(nrow(resale_test)-2)) {
+  if(resale_test$PARCEL_I[i+2] == resale_test$PARCEL_I[i]){
+    if(resale_test$train_test[i+2] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
+      
+      resale_test$rs_index_sale[i] = resale_test$SALE1[i+2] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+2] & rs_index$lga == resale_test$LA_DESC[i+2])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_chained_sale[i] = resale_test$SALE1[i+2] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+2] & dit_index_chained$lga == resale_test$LA_DESC[i+2])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_sale[i] = resale_test$SALE1[i+2] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+2] & dit_index$lga == resale_test$LA_DESC[i+2])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlr_index_sale[i] = resale_test$SALE1[i+2] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+2] & mlr_index$lga == resale_test$LA_DESC[i+2])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlf_index_sale[i] = resale_test$SALE1[i+2] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+2] & mlf_index$lga == resale_test$LA_DESC[i+2])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])]
+    }
+  }
+  print(i)
+}
+for (i in 1:(nrow(resale_test)-3)) {
+  if(resale_test$PARCEL_I[i+3] == resale_test$PARCEL_I[i]){
+    if(resale_test$train_test[i+3] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
+      
+      resale_test$rs_index_sale[i] = resale_test$SALE1[i+3] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+3] & rs_index$lga == resale_test$LA_DESC[i+3])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_chained_sale[i] = resale_test$SALE1[i+3] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+3] & dit_index_chained$lga == resale_test$LA_DESC[i+3])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_sale[i] = resale_test$SALE1[i+3] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+3] & dit_index$lga == resale_test$LA_DESC[i+3])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlr_index_sale[i] = resale_test$SALE1[i+3] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+3] & mlr_index$lga == resale_test$LA_DESC[i+3])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlf_index_sale[i] = resale_test$SALE1[i+3] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+3] & mlf_index$lga == resale_test$LA_DESC[i+3])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])]
+    }
+  }
+  print(i)
+}
+for (i in 1:(nrow(resale_test)-4)) {
+  if(resale_test$PARCEL_I[i+4] == resale_test$PARCEL_I[i]){
+    if(resale_test$train_test[i+4] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
+      
+      resale_test$rs_index_sale[i] = resale_test$SALE1[i+4] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+4] & rs_index$lga == resale_test$LA_DESC[i+4])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_chained_sale[i] = resale_test$SALE1[i+4] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+4] & dit_index_chained$lga == resale_test$LA_DESC[i+4])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_sale[i] = resale_test$SALE1[i+4] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+4] & dit_index$lga == resale_test$LA_DESC[i+4])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlr_index_sale[i] = resale_test$SALE1[i+4] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+4] & mlr_index$lga == resale_test$LA_DESC[i+4])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlf_index_sale[i] = resale_test$SALE1[i+4] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+4] & mlf_index$lga == resale_test$LA_DESC[i+4])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])]
+    }
+  }
+  print(i)
+}
+for (i in 1:(nrow(resale_test)-5)) {
+  if(resale_test$PARCEL_I[i+5] == resale_test$PARCEL_I[i]){
+    if(resale_test$train_test[i+5] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
+      
+      resale_test$rs_index_sale[i] = resale_test$SALE1[i+5] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+5] & rs_index$lga == resale_test$LA_DESC[i+5])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_chained_sale[i] = resale_test$SALE1[i+5] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+5] & dit_index_chained$lga == resale_test$LA_DESC[i+5])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_sale[i] = resale_test$SALE1[i+5] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+5] & dit_index$lga == resale_test$LA_DESC[i+5])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlr_index_sale[i] = resale_test$SALE1[i+5] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+5] & mlr_index$lga == resale_test$LA_DESC[i+5])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlf_index_sale[i] = resale_test$SALE1[i+5] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+5] & mlf_index$lga == resale_test$LA_DESC[i+5])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])]
+    }
+  }
+  print(i)
+}
+for (i in 1:(nrow(resale_test)-6)) {
+  if(resale_test$PARCEL_I[i+6] == resale_test$PARCEL_I[i]){
+    if(resale_test$train_test[i+6] == "train" & resale_test$train_test[i] == "test" & resale_test$rs_index_sale[i] == 0){
+      
+      resale_test$rs_index_sale[i] = resale_test$SALE1[i+6] / rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i+6] & rs_index$lga == resale_test$LA_DESC[i+6])] * rs_index$index[which(rs_index$quarter == resale_test$quarter_num[i] & rs_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_chained_sale[i] = resale_test$SALE1[i+6] / dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i+6] & dit_index_chained$lga == resale_test$LA_DESC[i+6])] * dit_index_chained$index[which(dit_index_chained$quarter == resale_test$quarter_num[i] & dit_index_chained$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$dit_index_sale[i] = resale_test$SALE1[i+6] / dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i+6] & dit_index$lga == resale_test$LA_DESC[i+6])] * dit_index$index[which(dit_index$quarter == resale_test$quarter_num[i] & dit_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlr_index_sale[i] = resale_test$SALE1[i+6] / mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i+6] & mlr_index$lga == resale_test$LA_DESC[i+6])] * mlr_index$index[which(mlr_index$quarter == resale_test$quarter_num[i] & mlr_index$lga == resale_test$LA_DESC[i])]
+      
+      resale_test$mlf_index_sale[i] = resale_test$SALE1[i+6] / mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i+6] & mlf_index$lga == resale_test$LA_DESC[i+6])] * mlf_index$index[which(mlf_index$quarter == resale_test$quarter_num[i] & mlf_index$lga == resale_test$LA_DESC[i])]
+    }
+  }
+  print(i)
+}
+
+
+resale_test = resale_test %>%
+  filter(resale_test$train_test == "test")
+
+resale_test = resale_test %>%
+  filter(resale_test$rs_index_sale > 0)
+
+
+#dit_index
+temp = (resale_test$SALE1 - resale_test$dit_index_sale)/resale_test$dit_index_sale
+median(temp)
+median(abs(temp))
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
+#dit_index_chained
+temp = (resale_test$SALE1 - resale_test$dit_index_chained_sale)/resale_test$dit_index_chained_sale
+median(temp)
+median(abs(temp))
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
+#rs_index
+temp = (resale_test$SALE1 - resale_test$rs_index_sale)/resale_test$rs_index_sale
+median(temp)
+median(abs(temp))
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
+#mlf_index
+temp = (resale_test$SALE1 - resale_test$mlf_index_sale)/resale_test$mlf_index_sale
+median(temp)
+median(abs(temp))
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
+#mlr_index
+temp = (resale_test$SALE1 - resale_test$mlr_index_sale)/resale_test$mlr_index_sale
+median(temp)
+median(abs(temp))
+sum(abs(temp)>0.1)/24504
+sum(abs(temp)>0.2)/24504
 ```
