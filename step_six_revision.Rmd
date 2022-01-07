@@ -162,6 +162,32 @@ sd(mlf_revison_summary$V1)
 
 
 
+#revision graphs (full samples)
+```{r}
+mlf_revision_index = read.csv("./data/mlf_index_revision_quaterly.csv")[-1]
+
+revision_plot_mlf = data.frame(quarter = rep(28:68, 4), index = 0, revised_quarter = "")
+
+for (i in 1:41) {
+  revision_plot_mlf$index[i] = mlf_revision_index[28,i]
+  revision_plot_mlf$revised_quarter[i] = "Quarter 28"
+  revision_plot_mlf$index[i+41] = mlf_revision_index[38,i]
+  revision_plot_mlf$revised_quarter[i+41] = "Quarter 38"
+  revision_plot_mlf$index[i+82] = mlf_revision_index[48,i]
+  revision_plot_mlf$revised_quarter[i+82] = "Quarter 48"
+  revision_plot_mlf$index[i+123] = mlf_revision_index[58,i]
+  revision_plot_mlf$revised_quarter[i+123] = "Quarter 58"
+}
+
+revision_plot_mlf$index[which(revision_plot_mlf$index == 0)] = NA
+
+mlf_plot = ggplot(revision_plot_mlf, aes(quarter, index, group = revised_quarter, linetype = revised_quarter, shape = revised_quarter, color = revised_quarter)) + geom_line(size = 1.2) + geom_point(size = 4) + scale_shape(solid = FALSE, name = "Revised quarter")  + scale_color_grey(name = "Revised quarter", start = 0, end = 0.6, limits = c("Quarter 28", "Quarter 38", "Quarter 48", "Quarter 58")) + scale_linetype_discrete(name = "Revised quarter", limits = c("Quarter 28", "Quarter 38", "Quarter 48", "Quarter 58")) + theme_bw() + ylab("Index value") + xlab("Quarter of estimation")
+
+mlf_plot
+```
+
+
+
 #revision (repeat sales)
 ```{r}
 #prepare resale data
@@ -273,6 +299,32 @@ rs_revison_summary = rs_revison_summary %>%
 
 mean(rs_revison_summary$V1)
 sd(rs_revison_summary$V1)
+```
+
+
+
+#revision graphs (repeat sales)
+```{r}
+rs_revision_index = read.csv("./data/rs_index_revision_quaterly.csv")[-1]
+
+revision_plot_rs = data.frame(quarter = rep(28:68, 4), index = 0, revised_quarter = "")
+
+for (i in 1:41) {
+  revision_plot_rs$index[i] = rs_revision_index[28,i]
+  revision_plot_rs$revised_quarter[i] = "Quarter 28"
+  revision_plot_rs$index[i+41] = rs_revision_index[38,i]
+  revision_plot_rs$revised_quarter[i+41] = "Quarter 38"
+  revision_plot_rs$index[i+82] = rs_revision_index[48,i]
+  revision_plot_rs$revised_quarter[i+82] = "Quarter 48"
+  revision_plot_rs$index[i+123] = rs_revision_index[58,i]
+  revision_plot_rs$revised_quarter[i+123] = "Quarter 58"
+}
+
+revision_plot_rs$index[which(revision_plot_rs$index == 0)] = NA
+
+rs_plot = ggplot(revision_plot_rs, aes(quarter, index, group = revised_quarter, linetype = revised_quarter, shape = revised_quarter, color = revised_quarter)) + geom_line(size = 1.2) + geom_point(size = 4) + scale_shape(solid = FALSE, name = "Revised quarter")  + scale_color_grey(start = 0, end = 0.6, limits = c("Quarter 28", "Quarter 38", "Quarter 48", "Quarter 58"), name = "Revised quarter") + scale_linetype_discrete(limits = c("Quarter 28", "Quarter 38", "Quarter 48", "Quarter 58"), name = "Revised quarter") + theme_bw() + ylab("Index value") + xlab("Quarter of estimation")
+
+rs_plot
 ```
 
 

@@ -411,7 +411,7 @@ indice = rbind(abs_index, dit_index[,-2], dit_index_chained[,-2], mlf_index, mlr
 indice$method = c(rep("ABS Index", 68), rep("DIT", 68), rep("DIT_Chained", 68), rep("MLF", 68), rep("MLR", 68), rep("RS", 68))
 
 
-indices_plot = ggplot(indice, aes(quarter, index, color = method, linetype = method)) + geom_line(size = 1.2) + scale_color_grey(start = 0, end = 0.8, limits = c("ABS Index", "DIT", "DIT_Chained", "MLF", "MLR", "RS"), labels = c("ABS Index", "HI Index", "HI_Chained Index", "MLF Index", "MLR Index", "Repeat Sales Index")) + scale_linetype_discrete(limits = c("ABS Index", "DIT", "DIT_Chained", "MLF", "MLR", "RS"), labels = c("ABS Index", "HI Index", "HI_Chained Index", "MLF Index", "MLR Index", "Repeat Sales Index")) + theme_bw() + scale_x_continuous(name = "Quater",breaks = c(1, 17, 33, 49, 65), labels = c("2004Q1", "2008Q1", "2012Q1", "2016Q1", "2020Q1"))
+indices_plot = ggplot(indice, aes(quarter, index, color = method, linetype = method)) + geom_line(size = 1.2) + scale_color_grey(start = 0, end = 0.8, limits = c("ABS Index", "DIT", "DIT_Chained", "MLF", "MLR", "RS"), labels = c("ABS index", "HI index", "HI_chained index", "MLF index", "MLR index", "Repeat sales index"), name = "Methods") + scale_linetype_discrete(limits = c("ABS Index", "DIT", "DIT_Chained", "MLF", "MLR", "RS"), labels = c("ABS index", "HI index", "HI_chained index", "MLF index", "MLR index", "Repeat sales index"), name = "Methods") + theme_bw() + scale_x_continuous(name = "Quater",breaks = c(1, 17, 33, 49, 65), labels = c("2004Q1", "2008Q1", "2012Q1", "2016Q1", "2020Q1")) + ylab("Index")
 
 indices_plot
 ```
