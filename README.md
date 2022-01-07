@@ -18,12 +18,14 @@ Working Process
     - [x] Imputation method (T index).
     - [x] Repeat sales method.
   - [x] Global Index quality test.
-  - [ ] Local Indices construction.
-    - [ ] ML method (ALE).
-    - [ ] Imputation method (T index).
-    - [ ] Repeat sales method.
-  - [ ] Local Indices quality test.
-  - [ ] Revision.
+  - [x] Local Indices construction.
+    - [x] ML method (ALE).
+    - [x] Imputation method (T index).
+    - [x] Repeat sales method.
+  - [x] Local Indices quality test.
+  - [x] Revision.
+    - [x] Repeat sales index revision.
+    - [x] MLF index revision.
 - Paper Writing.
   - [x] Introduction.
   - [x] Methodology.
